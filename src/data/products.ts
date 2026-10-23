@@ -217,6 +217,23 @@ export const products: Product[] = [
     inStock: true,
     demo: false,
   },
+  {
+    id: 'y-elixir',
+    name: 'Y Elixir',
+    brand: 'Jean Paul Gaultier',
+    category: 'hombre',
+    concentration: 'Parfum',
+    image: '/images/image copy 31.png',
+    gallery: ['/images/image copy 31.png'],
+    description: 'Y Elixir, presentado con la información disponible del producto.',
+    versions: [{ key: 'premium', label: 'Premium', price: 150000 }],
+    featured: false,
+    bestseller: false,
+    novelty: true,
+    onSale: false,
+    inStock: true,
+    demo: false,
+  },
 ];
 
 export const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
