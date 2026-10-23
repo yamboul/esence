@@ -200,6 +200,23 @@ export const products: Product[] = [
     inStock: true,
     demo: false,
   },
+  {
+    id: 'ultra-male',
+    name: 'Ultra Male',
+    brand: 'Jean Paul Gaultier',
+    category: 'hombre',
+    concentration: 'Eau de Toilette',
+    image: '/images/image copy 29.png',
+    gallery: ['/images/image copy 29.png', '/images/image copy 30.png'],
+    description: 'Ultra Male de Jean Paul Gaultier, presentado con la información disponible del producto.',
+    versions: [{ key: 'premium', label: 'Premium', price: 150000 }],
+    featured: false,
+    bestseller: false,
+    novelty: true,
+    onSale: false,
+    inStock: true,
+    demo: false,
+  },
 ];
 
 export const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
