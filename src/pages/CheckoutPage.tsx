@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Lock, ShoppingBag, CreditCard, Landmark, Banknote, Wallet } from 'lucide-react';
+import { Check, Lock, ShoppingBag, CreditCard, Landmark, Banknote, Loader2 } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { supabase, functionErrorMessage } from '@/lib/supabase';
+import { PENDING_ORDER_KEY } from '@/lib/orders';
+import { BUSINESS } from '@/data/business';
+import DataConsentCheckbox from '@/components/DataConsentCheckbox';
 import { formatCOP, VERSION_LABELS, getVersionPrice, type CheckoutForm } from '@/types';
 
 const departments = [
@@ -18,25 +23,20 @@ const paymentOptions: {
   desc: string;
   icon: typeof CreditCard;
 }[] = [
-  { value: 'tarjeta', label: 'Tarjeta débito o crédito', desc: 'Visa, Mastercard, Amex', icon: CreditCard },
-  { value: 'pse', label: 'PSE', desc: 'Débito bancario en línea', icon: Wallet },
-  { value: 'transferencia', label: 'Transferencia bancaria', desc: 'Confirmación manual', icon: Landmark },
-  { value: 'contraentrega', label: 'Pago contraentrega', desc: 'Pago al recibir', icon: Banknote },
+  { value: 'wompi', label: 'Pago en línea', desc: 'Tarjeta, PSE o Nequi · vía Wompi', icon: CreditCard },
+  { value: 'transferencia', label: 'Transferencia bancaria', desc: 'Te enviamos los datos para pagar', icon: Landmark },
+  { value: 'contraentrega', label: 'Pago contraentrega', desc: 'Pagas al recibir', icon: Banknote },
 ];
-
-function normalizeLocation(value: string): string {
-  return value.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-}
-
-function isShippingIncluded(department: string, city: string): boolean {
-  const normalizedDepartment = normalizeLocation(department);
-  const normalizedCity = normalizeLocation(city);
-  return normalizedDepartment === 'bogota d.c.' || normalizedDepartment === 'bogota dc' || normalizedCity === 'soacha';
-}
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
+  const { session, profile } = useAuth();
   const [submitted, setSubmitted] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [orderRef, setOrderRef] = useState<string | null>(null);
+  const [acceptedData, setAcceptedData] = useState(false);
+  const [showConsentError, setShowConsentError] = useState(false);
   const [form, setForm] = useState<CheckoutForm>({
     fullName: '',
     phone: '',
@@ -45,13 +45,23 @@ export default function CheckoutPage() {
     city: '',
     address: '',
     notes: '',
-    paymentMethod: 'tarjeta',
+    paymentMethod: 'wompi',
+    marketingOptIn: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const shippingIncluded = isShippingIncluded(form.department, form.city);
+  // Con sesión iniciada (Google), se rellenan nombre y correo si están vacíos.
+  useEffect(() => {
+    if (!session) return;
+    setForm((f) => ({
+      ...f,
+      fullName: f.fullName || profile?.full_name || '',
+      email: f.email || session.user.email || '',
+      marketingOptIn: f.marketingOptIn || profile?.marketing_opt_in === true,
+    }));
+  }, [session, profile]);
 
-  const update = (field: keyof CheckoutForm, value: string) => {
+  const update = <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => {
     setForm((f) => ({ ...f, [field]: value }));
     if (errors[field]) {
       setErrors((e) => {
@@ -74,11 +84,76 @@ export default function CheckoutPage() {
     return Object.keys(e).length === 0;
   };
 
-  const handleSubmit = (ev: React.FormEvent) => {
+  const handleSubmit = async (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!validate()) return;
-    // En esta fase no se procesan pagos reales ni se almacena el pedido.
+    if (submitting) return;
+    const valid = validate();
+    if (!acceptedData) setShowConsentError(true);
+    if (!valid || !acceptedData) {
+      // Lleva al primer problema: un campo con error o, si todo está bien, la casilla de autorización.
+      // Espera al siguiente render para que los errores ya estén en pantalla.
+      setTimeout(() => {
+        const target = valid
+          ? document.getElementById('data-consent')
+          : document.querySelector<HTMLElement>('.input-luxe.border-rust-500');
+        target?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 0);
+      return;
+    }
+    setSubmitError(null);
+
+    // Sin Supabase configurado: modo demostración (no se guarda ni se cobra).
+    if (!supabase) {
+      setSubmitted(true);
+      clear();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
+    setSubmitting(true);
+    const { data, error } = await supabase.functions.invoke<{
+      reference: string;
+      total: number;
+      checkoutUrl?: string;
+    }>('create-order', {
+      body: {
+        customer: {
+          fullName: form.fullName,
+          phone: form.phone,
+          email: form.email,
+          department: form.department,
+          city: form.city,
+          address: form.address,
+          notes: form.notes,
+        },
+        items: items.map((i) => ({ id: i.product.id, version: i.version, quantity: i.quantity })),
+        paymentMethod: form.paymentMethod,
+        marketingOptIn: form.marketingOptIn,
+        dataConsent: true,
+        policyVersion: BUSINESS.policyVersion,
+      },
+    });
+
+    if (error || !data) {
+      setSubmitError(await functionErrorMessage(error));
+      setSubmitting(false);
+      return;
+    }
+
+    if (data.checkoutUrl) {
+      // El carrito se vacía en /pedido/resultado solo si el pago se aprueba.
+      try {
+        sessionStorage.setItem(PENDING_ORDER_KEY, data.reference);
+      } catch {
+        // ignore
+      }
+      window.location.assign(data.checkoutUrl);
+      return;
+    }
+
+    setOrderRef(data.reference);
     setSubmitted(true);
+    setSubmitting(false);
     clear();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -91,12 +166,17 @@ export default function CheckoutPage() {
         </div>
         <h1 className="mt-6 font-serif text-4xl font-medium text-ink-900">¡Pedido recibido!</h1>
         <p className="mt-3 max-w-md text-ink-600">
-          Gracias por tu solicitud. Hemos registrado tu pedido en modo demostración.{' '}
-          {isShippingIncluded(form.department, form.city)
-            ? 'El envío está incluido en el precio indicado.'
-            : 'Te confirmaremos el costo de envío antes de finalizar el pedido.'}
+          {!orderRef
+            ? 'Pedido registrado en modo demostración (la tienda aún no está conectada).'
+            : form.paymentMethod === 'transferencia'
+            ? 'Te contactaremos por WhatsApp o correo con los datos bancarios para completar el pago.'
+            : 'Te contactaremos para coordinar la entrega. Pagas al recibir tu pedido.'}{' '}
+          El envío es gratis a cualquier lugar de Colombia.
         </p>
         <div className="mt-6 rounded-2xl border border-ink-100 bg-ivory-100 p-5 text-left text-sm text-ink-700">
+          {orderRef && (
+            <p><span className="font-medium text-ink-900">Pedido:</span> <span className="font-mono">{orderRef}</span></p>
+          )}
           <p><span className="font-medium text-ink-900">Resumen:</span> {form.fullName} · {form.email}</p>
           <p><span className="font-medium text-ink-900">Entrega:</span> {form.address}, {form.city}, {form.department}</p>
           <p><span className="font-medium text-ink-900">Pago:</span> {paymentOptions.find((o) => o.value === form.paymentMethod)?.label}</p>
@@ -127,7 +207,7 @@ export default function CheckoutPage() {
     <div className="container-luxe py-10 lg:py-14">
       <h1 className="mb-2 font-serif text-3xl font-medium text-ink-900 sm:text-4xl">Finalizar compra</h1>
       <p className="mb-8 text-sm text-ink-500">
-        Completa tus datos para preparar tu pedido. El pago se procesará al integrar la pasarela.
+        Completa tus datos para preparar tu pedido. Envío gratis a todo Colombia.
       </p>
 
       <form onSubmit={handleSubmit} className="grid gap-10 lg:grid-cols-[1fr_400px]">
@@ -227,7 +307,7 @@ export default function CheckoutPage() {
 
           <section>
             <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Método de pago</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               {paymentOptions.map((opt) => (
                 <label
                   key={opt.value}
@@ -260,9 +340,32 @@ export default function CheckoutPage() {
             </div>
             <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-400">
               <Lock className="h-3.5 w-3.5" />
-              No se almacenarán datos de tarjetas. La pasarela de pagos se integrará posteriormente.
+              {form.paymentMethod === 'wompi'
+                ? 'Pagarás en la plataforma segura de Wompi (Bancolombia). ESSENCE no guarda datos de tarjetas.'
+                : 'Tus datos de pago no pasan por esta página.'}
             </p>
           </section>
+
+          <DataConsentCheckbox
+            checked={acceptedData}
+            onChange={(v) => {
+              setAcceptedData(v);
+              if (v) setShowConsentError(false);
+            }}
+            showError={showConsentError}
+          />
+
+          <label className="-mt-4 flex cursor-pointer items-start gap-3 rounded-2xl border border-ink-100 bg-ivory-100 p-4 text-sm text-ink-700">
+            <input
+              type="checkbox"
+              checked={form.marketingOptIn}
+              onChange={(e) => update('marketingOptIn', e.target.checked)}
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 text-ink-900 focus:ring-ink-900"
+            />
+            <span>
+              Quiero recibir ofertas y novedades de ESSENCE en mi correo. Puedo darme de baja cuando quiera.
+            </span>
+          </label>
         </div>
 
         {/* Summary */}
@@ -274,19 +377,23 @@ export default function CheckoutPage() {
                 const price = getVersionPrice(item.product, item.version);
                 return (
                   <li key={`${item.product.id}__${item.version}`} className="flex gap-3">
-                    <img
-                      src={item.product.image}
-                      alt={item.product.name}
-                      className="h-16 w-14 rounded-lg object-cover"
-                    />
+                    <div className="product-media h-16 w-14 shrink-0 overflow-hidden rounded-lg">
+                      <img
+                        src={item.product.image}
+                        alt={item.product.name}
+                        className="h-full w-full object-contain p-1"
+                      />
+                    </div>
                     <div className="flex flex-1 justify-between gap-2 text-sm">
                       <div>
                         <p className="font-medium text-ink-900">{item.product.name}</p>
                         <p className="text-xs text-ink-500">
-                          {item.product.sizeMl ? `${item.product.sizeMl} ml` : 'Presentación por confirmar'} · {VERSION_LABELS[item.version]} · x{item.quantity}
+                          {[item.product.sizeMl && `${item.product.sizeMl} ml`, VERSION_LABELS[item.version], `x${item.quantity}`]
+                            .filter(Boolean)
+                            .join(' · ')}
                         </p>
                       </div>
-                      <span className="font-medium">{formatCOP(price * item.quantity)}</span>
+                      <span className="price font-medium">{formatCOP(price * item.quantity)}</span>
                     </div>
                   </li>
                 );
@@ -296,25 +403,36 @@ export default function CheckoutPage() {
             <div className="mt-4 space-y-2 border-t border-ink-200 pt-4 text-sm">
               <div className="flex justify-between text-ink-600">
                 <span>Subtotal</span>
-                <span>{formatCOP(subtotal)}</span>
+                <span className="tabular-nums">{formatCOP(subtotal)}</span>
               </div>
               <div className="flex justify-between text-ink-600">
                 <span>Envío</span>
-                <span className={shippingIncluded ? 'text-sage-600' : 'text-rust-500'}>
-                  {shippingIncluded ? 'Incluido' : 'Costo por confirmar'}
-                </span>
+                <span className="font-medium text-sage-600">Gratis</span>
               </div>
-              <div className="flex justify-between border-t border-ink-200 pt-2 font-serif text-lg font-semibold text-ink-900">
-                <span>Total</span>
-                <span>{formatCOP(subtotal)}</span>
+              <div className="flex items-baseline justify-between border-t border-ink-200 pt-2 text-ink-900">
+                <span className="font-serif text-lg font-semibold">Total</span>
+                <span className="price text-lg">{formatCOP(subtotal)}</span>
               </div>
-              {!shippingIncluded && (
-                <p className="text-xs text-rust-500">Total final pendiente de confirmar envío.</p>
-              )}
+              <p className="text-xs text-ink-500">Envío gratis a todo Colombia.</p>
             </div>
 
-            <button type="submit" className="btn-primary mt-5 w-full">
-              {shippingIncluded ? 'Confirmar pedido' : 'Solicitar confirmación de envío'}
+            {submitError && (
+              <p role="alert" className="mt-4 rounded-xl bg-rust-400/10 px-4 py-3 text-sm text-rust-500">
+                {submitError}
+              </p>
+            )}
+            <button type="submit" disabled={submitting} className="btn-primary mt-5 w-full">
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Procesando…
+                </>
+              ) : form.paymentMethod === 'wompi' ? (
+                <>
+                  <Lock className="h-4 w-4" /> Ir a pagar {formatCOP(subtotal)}
+                </>
+              ) : (
+                'Confirmar pedido'
+              )}
             </button>
             <Link to="/catalogo" className="btn-ghost mt-2 w-full">
               Seguir comprando

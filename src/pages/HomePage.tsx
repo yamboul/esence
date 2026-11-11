@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, Truck, ShieldCheck, CreditCard, Headphones, Sparkles, TrendingUp, Tag } from 'lucide-react';
+import { ArrowRight, Truck, ShieldCheck, CreditCard, Headphones, Sparkles, TrendingUp, Tag, Banknote, MessageCircle, Check } from 'lucide-react';
 import { products, brandList } from '@/data/products';
+import { WHATSAPP_DISPLAY } from '@/lib/whatsapp';
+import { VERSION_INFO } from '@/types';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
 import type { Product } from '@/types';
@@ -11,10 +13,17 @@ const editorialImage2 = 'https://images.pexels.com/photos/37127787/pexels-photo-
 
 export default function HomePage() {
   const { add } = useCart();
-  const featured = products.filter((p) => p.featured).slice(0, 4);
-  const bestsellers = products.filter((p) => p.bestseller).slice(0, 4);
-  const novelties = products.filter((p) => p.novelty).slice(0, 4);
-  const onSale = products.filter((p) => p.onSale).slice(0, 3);
+  // Cada producto aparece en una sola sección de la Home, en este orden de prioridad.
+  const shown = new Set<string>();
+  const pick = (list: Product[], n: number) => {
+    const out = list.filter((p) => !shown.has(p.id)).slice(0, n);
+    out.forEach((p) => shown.add(p.id));
+    return out;
+  };
+  const featured = pick(products.filter((p) => p.featured), 4);
+  const bestsellers = pick(products.filter((p) => p.bestseller), 4);
+  const onSale = pick(products.filter((p) => p.onSale), 2);
+  const novelties = pick(products.filter((p) => p.novelty), onSale.length > 0 ? 2 : 4);
 
   const handleAdd = (p: Product) => add(p, 'premium');
 
@@ -35,19 +44,21 @@ export default function HomePage() {
               La esencia de la elegancia
             </h1>
             <p className="mt-6 max-w-md text-lg leading-relaxed text-ivory-100/80">
-              Fragancias auténticas para hombre y mujer. Descubre aromas que cuentan historias y dejan huella.
+              Los aromas de las grandes marcas para hombre y mujer, en versión Classic y Premium. Descubre fragancias que dejan huella.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/catalogo" className="btn-gold">
                 Descubrir fragancias
                 <ArrowRight className="h-4 w-4" />
               </Link>
-              <Link
-                to="/catalogo?ofertas=1"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-ivory-50/30 px-7 py-3.5 text-sm font-medium tracking-wide text-ivory-50 transition-all hover:bg-ivory-50/10"
-              >
-                Ver ofertas
-              </Link>
+              {onSale.length > 0 && (
+                <Link
+                  to="/catalogo?ofertas=1"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-ivory-50/30 px-7 py-3.5 text-sm font-medium tracking-wide text-ivory-50 transition-all hover:bg-ivory-50/10"
+                >
+                  Ver ofertas
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -57,10 +68,10 @@ export default function HomePage() {
       <section className="border-b border-ink-100 bg-ivory-100">
         <div className="container-luxe grid grid-cols-2 gap-4 py-6 lg:grid-cols-4">
           {[
-            { icon: ShieldCheck, title: 'Información clara', text: 'Detalles del producto visibles' },
-            { icon: Truck, title: 'Envío en Colombia', text: 'A todo el país' },
-            { icon: CreditCard, title: 'Pago seguro', text: 'Múltiples métodos' },
-            { icon: Headphones, title: 'Atención premium', text: 'Soporte dedicado' },
+            { icon: Truck, title: 'Envío gratis', text: 'A todo Colombia' },
+            { icon: Banknote, title: 'Pago contraentrega', text: 'Pagas al recibir' },
+            { icon: CreditCard, title: 'Tarjeta, PSE o transferencia', text: 'Elige cómo pagar' },
+            { icon: MessageCircle, title: '¿Dudas? WhatsApp', text: WHATSAPP_DISPLAY },
           ].map((f) => (
             <div key={f.title} className="flex items-center gap-3">
               <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-ink-900 text-gold-300">
@@ -121,6 +132,50 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Classic vs Premium */}
+      <section id="versiones" className="scroll-mt-24 border-t border-ink-100 bg-ivory-100">
+        <div className="container-luxe py-20">
+          <div className="mb-10 max-w-2xl">
+            <p className="section-eyebrow">
+              <Sparkles className="h-3.5 w-3.5" /> Dos versiones
+            </p>
+            <h2 className="section-title">Classic o Premium: elige cómo llevarlo</h2>
+            <p className="mt-4 leading-relaxed text-ink-600">
+              Muchas de nuestras fragancias vienen en dos versiones. Mismo aroma de referencia, distinta intensidad.
+            </p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2">
+            <div className="rounded-2xl border border-ink-200 bg-white p-8">
+              <p className="text-xs font-semibold uppercase tracking-widest text-ink-500">Classic</p>
+              <h3 className="mt-2 font-serif text-2xl font-medium text-ink-900">{VERSION_INFO.classic.short}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-ink-600">{VERSION_INFO.classic.long}</p>
+              <ul className="mt-6 space-y-2.5 text-sm text-ink-700">
+                {['Aroma suave y discreto', 'Para el día a día', 'Precio más accesible'].map((t) => (
+                  <li key={t} className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 shrink-0 text-ink-400" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="relative rounded-2xl bg-ink-900 p-8 text-ivory-50">
+              <span className="absolute right-6 top-6 rounded-full bg-gold-400 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink-900">
+                Recomendada
+              </span>
+              <p className="text-xs font-semibold uppercase tracking-widest text-gold-300">Premium</p>
+              <h3 className="mt-2 font-serif text-2xl font-medium">{VERSION_INFO.premium.short}</h3>
+              <p className="mt-3 text-sm leading-relaxed text-ivory-100/75">{VERSION_INFO.premium.long}</p>
+              <ul className="mt-6 space-y-2.5 text-sm text-ivory-100/90">
+                {['Réplica exacta del original', 'Esencia más concentrada', 'Mayor duración y proyección'].map((t) => (
+                  <li key={t} className="flex items-center gap-2.5">
+                    <Check className="h-4 w-4 shrink-0 text-gold-300" /> {t}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Editorial split */}
       <section className="bg-ink-900 text-ivory-50">
         <div className="container-luxe grid items-center gap-12 py-20 lg:grid-cols-2">
@@ -149,7 +204,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Bestsellers */}
+      {/* Bestsellers: solo si hay productos marcados con bestseller */}
+      {bestsellers.length > 0 && (
       <section className="container-luxe py-20">
         <div className="mb-10 flex items-end justify-between gap-4">
           <div>
@@ -168,34 +224,55 @@ export default function HomePage() {
           ))}
         </div>
       </section>
+      )}
 
-      {/* Novelties + Offers */}
+      {/* Novelties + Offers: cada columna aparece solo si tiene productos */}
+      {(novelties.length > 0 || onSale.length > 0) && (
       <section className="bg-ivory-100">
         <div className="container-luxe py-20">
           <div className="mb-10">
             <p className="section-eyebrow">
-              <Tag className="h-3.5 w-3.5" /> Recién llegado y en oferta
+              <Tag className="h-3.5 w-3.5" />{' '}
+              {novelties.length > 0 && onSale.length > 0
+                ? 'Recién llegado y en oferta'
+                : novelties.length > 0
+                ? 'Recién llegado'
+                : 'Precios especiales'}
             </p>
-            <h2 className="section-title">Novedades y ofertas</h2>
+            <h2 className="section-title">
+              {novelties.length > 0 && onSale.length > 0
+                ? 'Novedades y ofertas'
+                : novelties.length > 0
+                ? 'Novedades'
+                : 'Ofertas'}
+            </h2>
           </div>
-          <div className="grid gap-12 lg:grid-cols-2">
-            <div>
-              <h3 className="mb-5 font-serif text-xl text-ink-900">Novedades</h3>
-              <div className="grid grid-cols-2 gap-5">
-                {novelties.slice(0, 2).map((p) => (
-                  <ProductCard key={p.id} product={p} onAdd={handleAdd} />
-                ))}
+          {novelties.length > 0 && onSale.length > 0 ? (
+            <div className="grid gap-12 lg:grid-cols-2">
+              <div>
+                <h3 className="mb-5 font-serif text-xl text-ink-900">Novedades</h3>
+                <div className="grid grid-cols-2 gap-5">
+                  {novelties.slice(0, 2).map((p) => (
+                    <ProductCard key={p.id} product={p} onAdd={handleAdd} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <h3 className="mb-5 font-serif text-xl text-ink-900">Ofertas</h3>
+                <div className="grid grid-cols-2 gap-5">
+                  {onSale.slice(0, 2).map((p) => (
+                    <ProductCard key={p.id} product={p} onAdd={handleAdd} />
+                  ))}
+                </div>
               </div>
             </div>
-            <div>
-              <h3 className="mb-5 font-serif text-xl text-ink-900">Ofertas</h3>
-              <div className="grid grid-cols-2 gap-5">
-                {onSale.slice(0, 2).map((p) => (
-                  <ProductCard key={p.id} product={p} onAdd={handleAdd} />
-                ))}
-              </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {(novelties.length > 0 ? novelties : onSale).map((p) => (
+                <ProductCard key={p.id} product={p} onAdd={handleAdd} />
+              ))}
             </div>
-          </div>
+          )}
           <div className="mt-8 text-center">
             <Link to="/catalogo" className="btn-outline">
               Ver catálogo completo <ArrowRight className="h-4 w-4" />
@@ -203,6 +280,7 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+      )}
 
       {/* Editorial 2 */}
       <section className="container-luxe py-20">
@@ -217,8 +295,8 @@ export default function HomePage() {
             <ul className="mt-6 space-y-4">
               {[
                 { icon: ShieldCheck, title: 'Información transparente', text: 'Describimos cada producto con los datos disponibles.' },
-                { icon: Truck, title: 'Envíos a todo el país', text: 'Despachos a Bogotá, Medellín, Cali, Barranquilla y más.' },
-                { icon: CreditCard, title: 'Pago flexible', text: 'Tarjeta, PSE, transferencia o contraentrega cuando esté disponible.' },
+                { icon: Truck, title: 'Envío gratis a todo el país', text: 'Sin costo a Bogotá, Medellín, Cali, Barranquilla y cualquier ciudad de Colombia.' },
+                { icon: CreditCard, title: 'Pago flexible', text: 'Tarjeta, PSE, transferencia o pago contraentrega.' },
                 { icon: Headphones, title: 'Atención cercana', text: 'Te acompañamos antes, durante y después de tu compra.' },
               ].map((f) => (
                 <li key={f.title} className="flex gap-4">

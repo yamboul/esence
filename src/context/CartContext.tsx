@@ -1,7 +1,49 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useReducer, useState, type ReactNode } from 'react';
 import type { CartItem, Product, VersionKey } from '@/types';
+import { productById } from '@/data/products';
 
-const STORAGE_KEY = 'essence-cart-v2';
+const STORAGE_KEY = 'essence-cart-v3';
+const LEGACY_STORAGE_KEY = 'essence-cart-v2';
+
+interface StoredItem {
+  id: string;
+  version: VersionKey;
+  quantity: number;
+}
+
+// Reconstruye el carrito desde el catálogo actual. Descarta productos que ya no existen,
+// versiones que ya no se ofrecen y productos agotados.
+function loadStoredItems(): CartItem[] {
+  try {
+    let raw = localStorage.getItem(STORAGE_KEY);
+    let legacy = false;
+    if (!raw) {
+      raw = localStorage.getItem(LEGACY_STORAGE_KEY);
+      legacy = raw !== null;
+    }
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+
+    const items: CartItem[] = [];
+    for (const entry of parsed) {
+      // Formato v2 guardaba el producto completo: { product: { id }, version, quantity }.
+      const id: unknown = legacy ? entry?.product?.id : entry?.id;
+      const version: unknown = entry?.version;
+      const quantity: unknown = entry?.quantity;
+      if (typeof id !== 'string' || (version !== 'classic' && version !== 'premium')) continue;
+      if (typeof quantity !== 'number' || !Number.isInteger(quantity) || quantity <= 0) continue;
+      const product = productById(id);
+      if (!product || !product.inStock) continue;
+      if (!product.versions.some((v) => v.key === version)) continue;
+      items.push({ product, version, quantity });
+    }
+    if (legacy) localStorage.removeItem(LEGACY_STORAGE_KEY);
+    return items;
+  } catch {
+    return [];
+  }
+}
 
 interface CartState {
   items: CartItem[];
@@ -83,23 +125,22 @@ interface CartContextValue {
 const CartContext = createContext<CartContextValue | null>(null);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, { items: [] });
-  const [isOpen, setOpen] = useReducer((v: boolean, n: boolean) => n, false);
+  // Carga síncrona: evita que el efecto de guardado sobrescriba el carrito con [] al montar.
+  const [state, dispatch] = useReducer(reducer, undefined, () => ({ items: loadStoredItems() }));
+  const [isOpen, setOpen] = useState(false);
 
   useEffect(() => {
+    // Solo se guardan referencias; precio y datos se leen siempre del catálogo actual.
+    const stored: StoredItem[] = state.items.map((i) => ({
+      id: i.product.id,
+      version: i.version,
+      quantity: i.quantity,
+    }));
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as CartItem[];
-        if (Array.isArray(parsed)) dispatch({ type: 'INIT', items: parsed });
-      }
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(stored));
     } catch {
       // ignore
     }
-  }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.items));
   }, [state.items]);
 
   const value = useMemo<CartContextValue>(() => {
@@ -113,6 +154,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       count,
       subtotal,
       add: (product, version, quantity) => {
+        if (!product.inStock) return;
         dispatch({ type: 'ADD', product, version, quantity });
         setOpen(true);
       },

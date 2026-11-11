@@ -16,12 +16,12 @@ export default function ProductCard({ product, onAdd }: Props) {
   return (
     <article className="card-product group">
       <Link to={`/producto/${product.id}`} className="block">
-        <div className="relative aspect-[3/4] overflow-hidden bg-ivory-100">
+        <div className="product-media relative aspect-[3/4] overflow-hidden">
           <img
             src={product.image}
             alt={`${product.brand} ${product.name}`}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className="h-full w-full object-contain p-6 pt-12 transition-transform duration-700 ease-out group-hover:scale-105"
           />
           <div className="absolute left-3 top-3 flex flex-col gap-1.5">
             {product.onSale && (
@@ -32,6 +32,11 @@ export default function ProductCard({ product, onAdd }: Props) {
             {product.novelty && (
               <span className="rounded-full bg-gold-400 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink-900">
                 Nuevo
+              </span>
+            )}
+            {!product.inStock && (
+              <span className="rounded-full bg-rust-500 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ivory-50">
+                Agotado
               </span>
             )}
             {product.demo && (
@@ -61,7 +66,7 @@ export default function ProductCard({ product, onAdd }: Props) {
 
         <div className="mt-3 flex flex-col gap-0.5">
           <div className="flex items-baseline gap-2">
-            <span className="font-serif text-lg font-semibold text-ink-900">{formatCOP(premiumPrice)}</span>
+            <span className="price text-base">{formatCOP(premiumPrice)}</span>
             {twoVersions && (
               <span className="text-[10px] font-medium uppercase tracking-wider text-gold-600">Premium</span>
             )}
@@ -73,7 +78,8 @@ export default function ProductCard({ product, onAdd }: Props) {
           )}
         </div>
 
-        <div className="mt-4 flex gap-2">
+        {/* mt-auto: alinea los botones aunque una tarjeta tenga la línea "Classic desde". */}
+        <div className="mt-auto flex gap-2 pt-4">
           <Link
             to={`/producto/${product.id}`}
             className="flex-1 rounded-full border border-ink-300 py-2.5 text-center text-xs font-medium uppercase tracking-wider text-ink-900 transition-all hover:border-ink-900 hover:bg-ink-900 hover:text-ivory-50"
@@ -82,8 +88,10 @@ export default function ProductCard({ product, onAdd }: Props) {
           </Link>
           <button
             onClick={() => onAdd(product)}
-            aria-label={`Agregar ${product.name} al carrito`}
-            className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-900 text-ivory-50 transition-all hover:bg-ink-800 active:scale-95"
+            disabled={!product.inStock}
+            aria-label={product.inStock ? `Agregar ${product.name} al carrito` : `${product.name} agotado`}
+            title={product.inStock ? undefined : 'Agotado'}
+            className="flex h-10 w-10 items-center justify-center rounded-full bg-ink-900 text-ivory-50 transition-all hover:bg-ink-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-ink-300 disabled:active:scale-100"
           >
             <ShoppingBag className="h-4 w-4" />
           </button>

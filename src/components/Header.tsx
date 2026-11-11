@@ -1,18 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Menu, Search, ShoppingBag, User, X } from 'lucide-react';
+import { LogOut, Menu, Search, ShieldCheck, ShoppingBag, User, X } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
+import { useAuth } from '@/context/AuthContext';
+import { hasCategory, hasOffers } from '@/data/products';
 
+// Solo se muestran enlaces que llevan a resultados.
 const navLinks = [
-  { label: 'Inicio', to: '/' },
-  { label: 'Hombre', to: '/catalogo?cat=hombre' },
-  { label: 'Mujer', to: '/catalogo?cat=mujer' },
-  { label: 'Unisex', to: '/catalogo?cat=unisex' },
-  { label: 'Ofertas', to: '/catalogo?ofertas=1' },
-];
+  { label: 'Inicio', to: '/', show: true },
+  { label: 'Hombre', to: '/catalogo?cat=hombre', show: hasCategory('hombre') },
+  { label: 'Mujer', to: '/catalogo?cat=mujer', show: hasCategory('mujer') },
+  { label: 'Unisex', to: '/catalogo?cat=unisex', show: hasCategory('unisex') },
+  { label: 'Ofertas', to: '/catalogo?ofertas=1', show: hasOffers },
+].filter((l) => l.show);
 
 export default function Header() {
   const { count, setOpen } = useCart();
+  const { session, isAdmin } = useAuth();
   const [scrolled, setScrolled] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
@@ -83,12 +87,7 @@ export default function Header() {
             >
               <Search className="h-5 w-5" />
             </button>
-            <button
-              aria-label="Cuenta"
-              className="hidden sm:block rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100"
-            >
-              <User className="h-5 w-5" />
-            </button>
+            <UserMenu />
             <button
               onClick={() => setOpen(true)}
               aria-label="Carrito"
@@ -134,12 +133,101 @@ export default function Header() {
                 {l.label}
               </Link>
             ))}
-            <Link to="/catalogo" className="py-3.5 text-sm font-medium text-ink-500">
+            <Link to="/catalogo" className="border-b border-ink-100 py-3.5 text-sm font-medium text-ink-500">
               Ver todo el catálogo
             </Link>
+            <Link to="/cuenta" className="py-3.5 text-sm font-medium text-ink-700">
+              {session ? 'Mi cuenta' : 'Iniciar sesión'}
+            </Link>
+            {isAdmin && (
+              <Link to="/admin" className="py-3.5 text-sm font-medium text-gold-700">
+                Panel de administrador
+              </Link>
+            )}
           </nav>
         </div>
       )}
     </header>
+  );
+}
+
+// Icono de usuario: sin sesión lleva a /cuenta; con sesión abre un menú (y el panel si es admin).
+function UserMenu() {
+  const { session, profile, isAdmin, signOut } = useAuth();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  useEffect(() => setOpen(false), [location]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [open]);
+
+  const iconClass = 'relative hidden sm:block rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100';
+
+  if (!session) {
+    return (
+      <Link to="/cuenta" aria-label="Iniciar sesión" className={iconClass}>
+        <User className="h-5 w-5" />
+      </Link>
+    );
+  }
+
+  const name = profile?.full_name || session.user.email;
+
+  return (
+    <div ref={ref} className="relative hidden sm:block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        aria-label="Mi cuenta"
+        aria-expanded={open}
+        aria-haspopup="menu"
+        className="relative block rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100"
+      >
+        <User className="h-5 w-5" />
+        <span className={`absolute right-1 top-1 h-2 w-2 rounded-full ${isAdmin ? 'bg-gold-400' : 'bg-sage-500'}`} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 top-full mt-2 w-64 animate-scale-in overflow-hidden rounded-2xl border border-ink-100 bg-white shadow-[0_20px_50px_-20px_rgba(0,0,0,0.25)]"
+        >
+          <div className="border-b border-ink-100 px-4 py-3">
+            <p className="truncate text-sm font-medium text-ink-900">{name}</p>
+            <p className="truncate text-xs text-ink-500">{isAdmin ? 'Administrador' : session.user.email}</p>
+          </div>
+          <Link to="/cuenta" role="menuitem" className="flex items-center gap-2.5 px-4 py-3 text-sm text-ink-700 hover:bg-ink-50">
+            <User className="h-4 w-4" /> Mi cuenta y pedidos
+          </Link>
+          {isAdmin && (
+            <Link to="/admin" role="menuitem" className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-ink-900 hover:bg-ink-50">
+              <ShieldCheck className="h-4 w-4 text-gold-600" /> Panel de administrador
+            </Link>
+          )}
+          <button
+            role="menuitem"
+            onClick={async () => {
+              await signOut();
+              navigate('/');
+            }}
+            className="flex w-full items-center gap-2.5 border-t border-ink-100 px-4 py-3 text-left text-sm text-ink-500 hover:bg-ink-50 hover:text-ink-900"
+          >
+            <LogOut className="h-4 w-4" /> Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
   );
 }

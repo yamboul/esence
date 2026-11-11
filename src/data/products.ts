@@ -1,4 +1,4 @@
-import type { Product } from '@/types';
+import type { Category, Product } from '@/types';
 
 export const products: Product[] = [
   {
@@ -91,15 +91,15 @@ export const products: Product[] = [
     demo: false,
   },
   {
-    id: 'uvxxx',
-    name: 'UVXXX',
+    id: 'hugo-xx',
+    name: 'Hugo XX',
     brand: 'Hugo Boss',
-    category: 'hombre',
+    category: 'mujer',
     concentration: 'Eau de Toilette',
     sizeMl: 100,
     image: '/images/image copy 9.png',
     gallery: ['/images/image copy 9.png', '/images/image copy 10.png'],
-    description: 'UVXXX, presentado con la información disponible del producto.',
+    description: 'Hugo XX, presentado con la información disponible del producto.',
     versions: [
       { key: 'classic', label: 'Classic', price: 100000 },
       { key: 'premium', label: 'Premium', price: 125000 },
@@ -322,3 +322,11 @@ export const brandList = brands.map((name) => {
   const count = products.filter((p) => p.brand === name).length;
   return { name, count };
 });
+
+export const productById = (id: string): Product | undefined => products.find((p) => p.id === id);
+
+// Disponibilidad de secciones: se usan para ocultar enlaces/secciones vacías.
+export const hasCategory = (category: Category): boolean => products.some((p) => p.category === category);
+export const hasOffers = products.some((p) => p.onSale);
+export const hasNovelties = products.some((p) => p.novelty);
+export const hasBestsellers = products.some((p) => p.bestseller);
