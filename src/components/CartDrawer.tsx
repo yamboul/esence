@@ -15,8 +15,10 @@ export default function CartDrawer() {
         }`}
       />
       <aside
-        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-ivory-50 shadow-2xl transition-transform duration-500 ease-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+        aria-hidden={!isOpen}
+        // La sombra solo cuando está abierto: cerrado, shadow-2xl asomaba por el borde derecho.
+        className={`fixed right-0 top-0 z-50 flex h-full w-full max-w-md flex-col bg-ivory-50 transition-[transform,visibility] duration-500 ease-out ${
+          isOpen ? 'visible translate-x-0 shadow-2xl' : 'invisible translate-x-full'
         }`}
       >
         <div className="flex items-center justify-between border-b border-ink-100 px-6 py-5">
@@ -58,11 +60,13 @@ export default function CartDrawer() {
                       className="flex gap-4 border-b border-ink-100 pb-4 last:border-0"
                     >
                       <Link to={`/producto/${item.product.id}`} onClick={() => setOpen(false)} className="shrink-0">
-                        <img
-                          src={item.product.image}
-                          alt={item.product.name}
-                          className="h-24 w-20 rounded-lg object-cover"
-                        />
+                        <div className="product-media h-24 w-20 overflow-hidden rounded-lg">
+                          <img
+                            src={item.product.image}
+                            alt={item.product.name}
+                            className="h-full w-full object-contain p-1.5"
+                          />
+                        </div>
                       </Link>
                       <div className="flex flex-1 flex-col">
                         <div className="flex justify-between gap-2">
@@ -80,9 +84,9 @@ export default function CartDrawer() {
                             <span className="mt-0.5 inline-block rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-ink-600">
                               {VERSION_LABELS[item.version]}
                             </span>
-                            <p className="mt-0.5 text-xs text-ink-400">
-                              {item.product.sizeMl ? `${item.product.sizeMl} ml` : 'Presentación por confirmar'}
-                            </p>
+                            {item.product.sizeMl && (
+                              <p className="mt-0.5 text-xs text-ink-400">{item.product.sizeMl} ml</p>
+                            )}
                           </div>
                           <button
                             onClick={() => remove(item.product.id, item.version)}
@@ -110,7 +114,7 @@ export default function CartDrawer() {
                               <Plus className="h-3 w-3" />
                             </button>
                           </div>
-                          <span className="font-serif text-base font-semibold text-ink-900">
+                          <span className="price text-sm">
                             {formatCOP(price * item.quantity)}
                           </span>
                         </div>
@@ -124,10 +128,10 @@ export default function CartDrawer() {
             <div className="border-t border-ink-100 px-6 py-5">
               <div className="flex items-center justify-between text-sm text-ink-600">
                 <span>Subtotal</span>
-                <span className="font-serif text-lg font-semibold text-ink-900">{formatCOP(subtotal)}</span>
+                <span className="price text-lg">{formatCOP(subtotal)}</span>
               </div>
               <p className="mt-1 text-xs text-ink-400">
-                Envío calculado en el proceso de compra.
+                Envío gratis a todo Colombia.
               </p>
               <Link
                 to="/checkout"

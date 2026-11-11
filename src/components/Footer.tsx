@@ -1,36 +1,33 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Mail, MapPin, Phone, MessageCircle } from 'lucide-react';
+import { hasCategory, hasNovelties, hasOffers } from '@/data/products';
+import { whatsappLink, WHATSAPP_DISPLAY } from '@/lib/whatsapp';
+import { BRAND_DISCLAIMER, BUSINESS, LEGAL_LINKS } from '@/data/business';
 
 const columns = [
   {
     title: 'Tienda',
     links: [
-      { label: 'Perfumes para hombre', to: '/catalogo?cat=hombre' },
-      { label: 'Perfumes para mujer', to: '/catalogo?cat=mujer' },
-      { label: 'Fragancias unisex', to: '/catalogo?cat=unisex' },
-      { label: 'Ofertas', to: '/catalogo?ofertas=1' },
-      { label: 'Novedades', to: '/catalogo?novedades=1' },
-    ],
+      { label: 'Perfumes para hombre', to: '/catalogo?cat=hombre', show: hasCategory('hombre') },
+      { label: 'Perfumes para mujer', to: '/catalogo?cat=mujer', show: hasCategory('mujer') },
+      { label: 'Fragancias unisex', to: '/catalogo?cat=unisex', show: hasCategory('unisex') },
+      { label: 'Ofertas', to: '/catalogo?ofertas=1', show: hasOffers },
+      { label: 'Novedades', to: '/catalogo?novedades=1', show: hasNovelties },
+    ].filter((l) => l.show),
   },
   {
     title: 'Atención al cliente',
-    links: [
-      { label: 'Preguntas frecuentes', to: '/' },
-      { label: 'Política de envíos', to: '/' },
-      { label: 'Devoluciones y garantías', to: '/' },
-      { label: 'Términos y condiciones', to: '/' },
-      { label: 'Política de privacidad', to: '/' },
-    ],
+    links: [...LEGAL_LINKS],
   },
   {
     title: 'ESSENCE',
     links: [
-      { label: 'Nuestra historia', to: '/' },
-      { label: 'Compromiso de autenticidad', to: '/' },
-      { label: 'Contacto', to: '/' },
+      { label: 'Classic vs Premium', to: '/#versiones' },
+      { label: 'Mi cuenta y pedidos', to: '/cuenta' },
+      { label: 'Contacto por WhatsApp', to: whatsappLink(), external: true },
     ],
   },
-];
+] as { title: string; links: { label: string; to: string; external?: boolean }[] }[];
 
 export default function Footer() {
   return (
@@ -42,7 +39,7 @@ export default function Footer() {
               ESSENCE
             </span>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-ivory-100/70">
-              Perfumería premium para hombre y mujer. Fragancias auténticas con envío a toda Colombia.
+              Perfumería para hombre y mujer. Los aromas de las grandes marcas en versión Classic y Premium, con envío gratis a toda Colombia.
             </p>
             <div className="mt-6 flex gap-3">
               <a href="#" aria-label="Instagram" className="flex h-10 w-10 items-center justify-center rounded-full border border-ivory-100/20 transition-colors hover:bg-gold-400 hover:text-ink-900">
@@ -51,7 +48,7 @@ export default function Footer() {
               <a href="#" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-full border border-ivory-100/20 transition-colors hover:bg-gold-400 hover:text-ink-900">
                 <Facebook className="h-4 w-4" />
               </a>
-              <a href="#" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full border border-ivory-100/20 transition-colors hover:bg-gold-400 hover:text-ink-900">
+              <a href={whatsappLink()} target="_blank" rel="noopener noreferrer" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-full border border-ivory-100/20 transition-colors hover:bg-gold-400 hover:text-ink-900">
                 <MessageCircle className="h-4 w-4" />
               </a>
             </div>
@@ -65,9 +62,20 @@ export default function Footer() {
               <ul className="space-y-3">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link to={l.to} className="text-sm text-ivory-100/70 transition-colors hover:text-ivory-50">
-                      {l.label}
-                    </Link>
+                    {l.external ? (
+                      <a
+                        href={l.to}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-ivory-100/70 transition-colors hover:text-ivory-50"
+                      >
+                        {l.label}
+                      </a>
+                    ) : (
+                      <Link to={l.to} className="text-sm text-ivory-100/70 transition-colors hover:text-ivory-50">
+                        {l.label}
+                      </Link>
+                    )}
                   </li>
                 ))}
               </ul>
@@ -76,22 +84,33 @@ export default function Footer() {
         </div>
 
         <div className="mt-12 grid gap-4 border-t border-ivory-100/10 pt-8 sm:grid-cols-3">
-          <div className="flex items-center gap-3 text-sm text-ivory-100/70">
+          <a
+            href={whatsappLink()}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 text-sm text-ivory-100/70 transition-colors hover:text-ivory-50"
+          >
             <Phone className="h-4 w-4 text-gold-300" />
-            <span>+57 300 000 0000</span>
-          </div>
-          <div className="flex items-center gap-3 text-sm text-ivory-100/70">
-            <Mail className="h-4 w-4 text-gold-300" />
-            <span>atencion@essence.co</span>
-          </div>
+            <span>{WHATSAPP_DISPLAY} · WhatsApp</span>
+          </a>
+          <a
+            href={`mailto:${BUSINESS.email}`}
+            className="flex min-w-0 items-center gap-3 text-sm text-ivory-100/70 transition-colors hover:text-ivory-50"
+          >
+            <Mail className="h-4 w-4 shrink-0 text-gold-300" />
+            <span className="truncate">{BUSINESS.email}</span>
+          </a>
           <div className="flex items-center gap-3 text-sm text-ivory-100/70">
             <MapPin className="h-4 w-4 text-gold-300" />
-            <span>Bogotá, Colombia</span>
+            <span>
+              {BUSINESS.city}, {BUSINESS.country}
+            </span>
           </div>
         </div>
 
-        <div className="mt-8 border-t border-ivory-100/10 pt-6 text-center text-xs text-ivory-100/50">
-          © {new Date().getFullYear()} ESSENCE. Todos los derechos reservados. Proyecto de demostración.
+        <div className="mt-8 space-y-3 border-t border-ivory-100/10 pt-6 text-center text-xs text-ivory-100/50">
+          <p className="mx-auto max-w-3xl leading-relaxed">{BRAND_DISCLAIMER}</p>
+          <p>© {new Date().getFullYear()} ESSENCE. Todos los derechos reservados.</p>
         </div>
       </div>
     </footer>

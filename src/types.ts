@@ -43,6 +43,18 @@ export const VERSION_LABELS: Record<VersionKey, string> = {
   premium: 'Premium',
 };
 
+// Explicación de cada versión: se muestra en el selector de producto y en la Home.
+export const VERSION_INFO: Record<VersionKey, { short: string; long: string }> = {
+  classic: {
+    short: 'Versión ligera · uso personal',
+    long: 'Una versión más sencilla del aroma, suave y discreta. Ideal para el día a día o para uso personal, cuando no buscas una estela tan marcada.',
+  },
+  premium: {
+    short: 'Réplica exacta · más duradera',
+    long: 'Réplica exacta del perfume original de la marca. Esencia más concentrada, con mayor duración y proyección: la experiencia más cercana al original.',
+  },
+};
+
 export function getPremiumPrice(product: Product): number {
   const premium = product.versions.find((v) => v.key === 'premium');
   return premium ? premium.price : product.versions[0].price;
@@ -76,7 +88,8 @@ export interface CheckoutForm {
   city: string;
   address: string;
   notes: string;
-  paymentMethod: 'tarjeta' | 'pse' | 'transferencia' | 'contraentrega';
+  paymentMethod: 'wompi' | 'transferencia' | 'contraentrega';
+  marketingOptIn: boolean;
 }
 
 export const formatCOP = (value: number): string =>

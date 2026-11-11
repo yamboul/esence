@@ -1,25 +1,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { products, brands } from '@/data/products';
+import { products, brands, hasCategory, hasNovelties, hasOffers } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
 import type { Category, Product } from '@/types';
 import { getPremiumPrice } from '@/types';
 
-const categories: { value: 'all' | Category; label: string }[] = [
+const allCategories: { value: 'all' | Category; label: string }[] = [
   { value: 'all', label: 'Todo' },
   { value: 'hombre', label: 'Hombre' },
   { value: 'mujer', label: 'Mujer' },
   { value: 'unisex', label: 'Unisex' },
 ];
+const categories = allCategories.filter((c) => c.value === 'all' || hasCategory(c.value));
 
+// Rangos según el precio mostrado en la tarjeta (Premium). Intervalo (min, max].
+// Ajustar si cambian los precios del catálogo; los rangos sin productos se ocultan.
 const priceRanges = [
-  { label: 'Hasta $350.000', min: 0, max: 350000 },
-  { label: '$350.000 – $500.000', min: 350000, max: 500000 },
-  { label: '$500.000 – $700.000', min: 500000, max: 700000 },
-  { label: 'Más de $700.000', min: 700000, max: Infinity },
+  { label: 'Hasta $125.000', min: -Infinity, max: 125000 },
+  { label: '$125.000 – $150.000', min: 125000, max: 150000 },
+  { label: 'Más de $150.000', min: 150000, max: Infinity },
 ];
+
+const inRange = (price: number, r: (typeof priceRanges)[number]) => price > r.min && price <= r.max;
+const rangeCounts = priceRanges.map((r) => products.filter((p) => inRange(getPremiumPrice(p), r)).length);
 
 type SortKey = 'relevance' | 'price-asc' | 'price-desc' | 'name';
 
@@ -83,7 +88,7 @@ export default function CatalogPage() {
     if (selectedBrands.length) list = list.filter((p) => selectedBrands.includes(p.brand));
     if (priceRange !== null) {
       const r = priceRanges[priceRange];
-      list = list.filter((p) => getPremiumPrice(p) >= r.min && getPremiumPrice(p) <= r.max);
+      list = list.filter((p) => inRange(getPremiumPrice(p), r));
     }
 
     switch (sort) {
@@ -198,7 +203,7 @@ export default function CatalogPage() {
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Precio</h3>
               <div className="flex flex-col gap-1.5">
-                {priceRanges.map((r, i) => (
+                {priceRanges.map((r, i) => rangeCounts[i] > 0 && (
                   <label key={r.label} className="flex cursor-pointer items-center gap-2.5 text-sm text-ink-700">
                     <input
                       type="radio"
@@ -208,6 +213,7 @@ export default function CatalogPage() {
                       className="h-4 w-4 border-ink-300 text-ink-900 focus:ring-ink-900"
                     />
                     {r.label}
+                    <span className="text-xs text-ink-400">({rangeCounts[i]})</span>
                   </label>
                 ))}
                 <button
@@ -219,9 +225,11 @@ export default function CatalogPage() {
               </div>
             </div>
 
+            {(hasOffers || hasNovelties) && (
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Destacados</h3>
               <div className="flex flex-col gap-1.5 text-sm text-ink-700">
+                {hasOffers && (
                 <label className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
@@ -231,6 +239,8 @@ export default function CatalogPage() {
                   />
                   Solo ofertas
                 </label>
+                )}
+                {hasNovelties && (
                 <label className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
@@ -240,8 +250,10 @@ export default function CatalogPage() {
                   />
                   Solo novedades
                 </label>
+                )}
               </div>
             </div>
+            )}
 
             <button
               onClick={resetFilters}

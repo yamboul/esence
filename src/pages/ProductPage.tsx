@@ -1,13 +1,13 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Minus, Plus, ShoppingBag, Check, Truck, ShieldCheck, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Minus, Plus, ShoppingBag, Check, Truck, Banknote, ChevronRight } from 'lucide-react';
 import { products } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import {
   formatCOP,
-  getPremiumPrice,
   getVersionPrice,
   hasTwoVersions,
+  VERSION_INFO,
   VERSION_LABELS,
   type VersionKey,
 } from '@/types';
@@ -23,6 +23,14 @@ export default function ProductPage() {
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [added, setAdded] = useState(false);
+
+  // Al navegar entre productos el componente se reutiliza: reiniciar selección.
+  useEffect(() => {
+    setVersion('premium');
+    setQty(1);
+    setActiveImage(0);
+    setAdded(false);
+  }, [id]);
 
   if (!product) {
     return (
@@ -44,6 +52,7 @@ export default function ProductPage() {
     .slice(0, 4);
 
   const handleAdd = () => {
+    if (!product.inStock) return;
     add(product, version, qty);
     setAdded(true);
     setTimeout(() => setAdded(false), 2000);
@@ -70,11 +79,11 @@ export default function ProductPage() {
 
       <div className="grid gap-10 lg:grid-cols-2 lg:gap-16">
         <div>
-          <div className="relative overflow-hidden rounded-2xl bg-ivory-100">
+          <div className="product-media relative overflow-hidden rounded-2xl">
             <img
               src={product.gallery[activeImage]}
               alt={`${product.brand} ${product.name}`}
-              className="aspect-[4/5] w-full object-cover"
+              className="aspect-[4/5] w-full object-contain p-8 sm:p-12"
             />
             {product.demo && (
               <span className="absolute right-4 top-4 rounded-full bg-ivory-50/90 px-3 py-1.5 text-xs font-semibold uppercase tracking-wider text-ink-600 backdrop-blur">
@@ -88,11 +97,12 @@ export default function ProductPage() {
                 <button
                   key={i}
                   onClick={() => setActiveImage(i)}
-                  className={`overflow-hidden rounded-lg border-2 transition-all ${
+                  aria-label={`Ver imagen ${i + 1}`}
+                  className={`product-media overflow-hidden rounded-lg border-2 transition-all ${
                     activeImage === i ? 'border-ink-900' : 'border-transparent opacity-70 hover:opacity-100'
                   }`}
                 >
-                  <img src={img} alt={`Vista ${i + 1}`} className="h-24 w-20 object-cover" />
+                  <img src={img} alt="" className="h-24 w-20 object-contain p-1.5" />
                 </button>
               ))}
             </div>
@@ -112,14 +122,20 @@ export default function ProductPage() {
             </p>
           )}
 
-          <div className="mt-6">
-            <p className="label-luxe">Versión</p>
-            {twoVersions ? (
+          {twoVersions ? (
+            <div className="mt-6">
+              <div className="flex items-baseline justify-between">
+                <p className="label-luxe">Elige tu versión</p>
+                <Link to="/#versiones" className="text-xs text-ink-500 underline-offset-2 hover:text-ink-900 hover:underline">
+                  ¿Cuál es la diferencia?
+                </Link>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 {product.versions.map((v) => (
                   <button
                     key={v.key}
                     onClick={() => setVersion(v.key)}
+                    aria-pressed={version === v.key}
                     className={`rounded-2xl border p-4 text-left transition-all ${
                       version === v.key
                         ? 'border-ink-900 bg-ink-50'
@@ -130,34 +146,27 @@ export default function ProductPage() {
                       <span className="font-medium text-ink-900">{v.label}</span>
                       {version === v.key && <Check className="h-4 w-4 text-ink-900" />}
                     </div>
-                    <p className="mt-1 font-serif text-lg font-semibold text-ink-900">
-                      {formatCOP(v.price)}
-                    </p>
-                    <p className="text-[10px] uppercase tracking-wider text-ink-400">
-                      {v.key === 'classic' ? 'Calidad AA' : 'Calidad AAA'}
-                    </p>
+                    <p className="price mt-1 text-lg">{formatCOP(v.price)}</p>
+                    <p className="mt-0.5 text-[11px] leading-snug text-ink-500">{VERSION_INFO[v.key].short}</p>
                   </button>
                 ))}
               </div>
-            ) : (
-              <div className="rounded-2xl border border-ink-200 bg-ink-50 p-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-medium text-ink-900">{product.versions[0].label}</span>
-                  <span className="font-serif text-lg font-semibold text-ink-900">
-                    {formatCOP(product.versions[0].price)}
-                  </span>
-                </div>
+              <p className="mt-3 text-sm leading-relaxed text-ink-600">{VERSION_INFO[version].long}</p>
+            </div>
+          ) : (
+            <div className="mt-6">
+              <div className="flex items-baseline gap-3">
+                <span className="price text-3xl">{formatCOP(currentPrice)}</span>
+                <span className="text-xs font-medium uppercase tracking-wider text-gold-600">
+                  Versión {product.versions[0].label}
+                </span>
               </div>
-            )}
-          </div>
-
-          <div className="mt-4 flex items-baseline gap-3">
-            <span className="font-serif text-3xl font-semibold text-ink-900">{formatCOP(currentPrice)}</span>
-            {version === 'premium' && twoVersions && (
-              <span className="text-xs font-medium uppercase tracking-wider text-gold-600">Versión Premium</span>
-            )}
-          </div>
-          <p className="mt-1 text-xs text-ink-400">Precio en pesos colombianos (COP)</p>
+              <p className="mt-2 text-sm leading-relaxed text-ink-600">
+                {VERSION_INFO[product.versions[0].key].long}
+              </p>
+            </div>
+          )}
+          <p className="mt-2 text-xs text-ink-400">Precio en pesos colombianos (COP)</p>
 
           <p className="mt-6 leading-relaxed text-ink-700">{product.description}</p>
 
@@ -215,14 +224,21 @@ export default function ProductPage() {
                 <Plus className="h-4 w-4" />
               </button>
             </div>
-            <button onClick={handleAdd} className="btn-primary flex-1 sm:flex-none">
-              {added ? (
+            <button
+              onClick={handleAdd}
+              disabled={!product.inStock}
+              className="btn-primary flex-1 whitespace-nowrap sm:flex-none"
+            >
+              {!product.inStock ? (
+                'Agotado'
+              ) : added ? (
                 <>
                   <Check className="h-4 w-4" /> Agregado ({VERSION_LABELS[version]})
                 </>
               ) : (
                 <>
-                  <ShoppingBag className="h-4 w-4" /> Agregar {formatCOP(currentPrice)}
+                  <ShoppingBag className="h-4 w-4" /> Agregar
+                  <span className="hidden sm:inline">{formatCOP(currentPrice)}</span>
                 </>
               )}
             </button>
@@ -243,12 +259,12 @@ export default function ProductPage() {
             )}
           </div>
 
-            <div className="mt-8 grid grid-cols-2 gap-4 border-t border-ink-100 pt-6">
+          <div className="mt-8 grid gap-4 border-t border-ink-100 pt-6 sm:grid-cols-2">
             <div className="flex items-center gap-2 text-sm text-ink-600">
-              <ShieldCheck className="h-5 w-5 text-gold-600" /> Información transparente
+              <Truck className="h-5 w-5 shrink-0 text-gold-600" /> Envío gratis a todo Colombia
             </div>
             <div className="flex items-center gap-2 text-sm text-ink-600">
-              <Truck className="h-5 w-5 text-gold-600" /> Envío a toda Colombia
+              <Banknote className="h-5 w-5 shrink-0 text-gold-600" /> Pago contraentrega disponible
             </div>
           </div>
         </div>
