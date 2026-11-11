@@ -1,0 +1,7 @@
+# Configuración de despliegue en Netlify (se usa al conectar el sitio con GitHub).
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
