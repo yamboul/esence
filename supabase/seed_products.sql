@@ -17,7 +17,8 @@ values
   ('one-million-lucky', 'One Million Lucky', 'Paco Rabanne', null, 125000, true),
   ('one-million-royal', 'One Million Royal', 'Paco Rabanne', null, 125000, true),
   ('ultra-male', 'Ultra Male', 'Jean Paul Gaultier', null, 150000, true),
-  ('y-elixir', 'Y Elixir', 'Jean Paul Gaultier', null, 150000, true)
+  ('y-elixir', 'Y Elixir', 'Jean Paul Gaultier', null, 150000, true),
+  ('9pm-night-out', '9 PM Night Out', 'Afnan', null, 190000, true)
 on conflict (id) do update set
   name = excluded.name,
   brand = excluded.brand,
@@ -28,4 +29,4 @@ on conflict (id) do update set
 
 -- Productos que ya no están en el catálogo quedan agotados (no se borran: pedidos antiguos los referencian).
 update public.products set in_stock = false, updated_at = now()
-where id not in ('yara-lattafa', '212-vip-rose-carolina-herrera', 'sauvage-dior', 'asad-bourbon-lattafa', 'valentino', 'hugo-xx', 'tyrant-odyssey', 'versace-eros-energy', '212-men-sexy', '212-vip', '212-vip-black', 'versace-eros-flame', 'one-million', 'one-million-lucky', 'one-million-royal', 'ultra-male', 'y-elixir');
+where id not in ('yara-lattafa', '212-vip-rose-carolina-herrera', 'sauvage-dior', 'asad-bourbon-lattafa', 'valentino', 'hugo-xx', 'tyrant-odyssey', 'versace-eros-energy', '212-men-sexy', '212-vip', '212-vip-black', 'versace-eros-flame', 'one-million', 'one-million-lucky', 'one-million-royal', 'ultra-male', 'y-elixir', '9pm-night-out');

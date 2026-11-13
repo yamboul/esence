@@ -314,6 +314,32 @@ export const products: Product[] = [
     inStock: true,
     demo: false,
   },
+  {
+    id: '9pm-night-out',
+    name: '9 PM Night Out',
+    brand: 'Afnan',
+    category: 'hombre',
+    concentration: 'Parfum',
+    sizeMl: 100,
+    image: '/images/9pm-night-out.webp',
+    gallery: ['/images/9pm-night-out.webp', '/images/9pm-night-out-2.webp', '/images/9pm-night-out-3.webp'],
+    description:
+      'Creado para las noches que se recuerdan. 9 PM Night Out abre con una salida vibrante y frutal de pitahaya, manzana y bergamota, con un toque de coñac que le da carácter desde el primer instante. En el corazón aparecen el cardamomo, el cuero suave y un toffee delicado que lo vuelven cálido, elegante y magnético. Al asentarse en la piel, la haba tonka, el patchouli y las maderas ambaradas lo hacen más profundo e intenso, con una estela que se queda mucho después de que te vas. Seguro, sofisticado y moderno: la fragancia perfecta para salir de noche.',
+    family: 'Ambarada amaderada',
+    occasions: ['Noche', 'Fiestas', 'Citas'],
+    notes: {
+      salida: ['Pitahaya', 'Bergamota', 'Coñac', 'Lavanda', 'Manzana'],
+      corazon: ['Cardamomo', 'Mahonial', 'Gamuza', 'Toffee', 'Cedro'],
+      fondo: ['Haba tonka', 'Akigalawood', 'Ambrofix', 'Patchouli'],
+    },
+    versions: [{ key: 'premium', label: 'Premium', price: 190000 }],
+    featured: false,
+    bestseller: false,
+    novelty: true,
+    onSale: false,
+    inStock: true,
+    demo: false,
+  },
 ];
 
 export const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
