@@ -1,5 +1,13 @@
 // Municipios de Colombia por departamento (DIVIPOLA del DANE, incluye áreas no municipalizadas).
-// Las claves coinciden con los departamentos del checkout.
+// Las claves coinciden con DEPARTMENTS.
+
+export const DEPARTMENTS = [
+  'Amazonas', 'Antioquia', 'Arauca', 'Atlántico', 'Bolívar', 'Boyacá', 'Caldas',
+  'Caquetá', 'Casanare', 'Cauca', 'Cesar', 'Chocó', 'Córdoba', 'Cundinamarca',
+  'Bogotá D.C.', 'Guainía', 'Guaviare', 'Huila', 'La Guajira', 'Magdalena', 'Meta', 'Nariño',
+  'Norte de Santander', 'Putumayo', 'Quindío', 'Risaralda', 'San Andrés y Providencia',
+  'Santander', 'Sucre', 'Tolima', 'Valle del Cauca', 'Vaupés', 'Vichada',
+];
 
 export const MUNICIPIOS: Record<string, string[]> = {
   'Amazonas': ['El Encanto', 'La Chorrera', 'La Pedrera', 'La Victoria', 'Leticia', 'Mirití-Paraná', 'Puerto Alegría', 'Puerto Arica', 'Puerto Nariño', 'Puerto Santander', 'Tarapacá'],

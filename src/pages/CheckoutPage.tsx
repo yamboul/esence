@@ -1,38 +1,22 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Lock, ShoppingBag, CreditCard, Landmark, Banknote, Loader2, MessageCircle } from 'lucide-react';
+import { Check, Lock, ShoppingBag, Loader2, MessageCircle, MapPin, Pencil } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
-import { supabase, functionErrorMessage } from '@/lib/supabase';
+import { hasShippingData, useAuth } from '@/context/AuthContext';
+import { supabase, supabaseEnabled, onlineOrders, functionErrorMessage } from '@/lib/supabase';
 import { PENDING_ORDER_KEY } from '@/lib/orders';
 import { whatsappLink } from '@/lib/whatsapp';
 import { BUSINESS } from '@/data/business';
-import { MUNICIPIOS } from '@/data/colombia';
+import { DEPARTMENTS, MUNICIPIOS } from '@/data/colombia';
+import { AVAILABLE_PAYMENTS, paymentLabel } from '@/data/payments';
 import DataConsentCheckbox from '@/components/DataConsentCheckbox';
+import GoogleButton from '@/components/GoogleButton';
 import { formatCOP, VERSION_LABELS, getVersionPrice, type CartItem, type CheckoutForm } from '@/types';
 
-const departments = [
-  'Amazonas', 'Antioquia', 'Arauca', 'Atlántico', 'Bolívar', 'Boyacá', 'Caldas',
-  'Caquetá', 'Casanare', 'Cauca', 'Cesar', 'Chocó', 'Córdoba', 'Cundinamarca',
-  'Bogotá D.C.', 'Guainía', 'Guaviare', 'Huila', 'La Guajira', 'Magdalena', 'Meta', 'Nariño',
-  'Norte de Santander', 'Putumayo', 'Quindío', 'Risaralda', 'San Andrés y Providencia',
-  'Santander', 'Sucre', 'Tolima', 'Valle del Cauca', 'Vaupés', 'Vichada',
-];
-
-const paymentOptions: {
-  value: CheckoutForm['paymentMethod'];
-  label: string;
-  desc: string;
-  icon: typeof CreditCard;
-}[] = [
-  { value: 'wompi', label: 'Pago en línea', desc: 'Tarjeta, PSE o Nequi · vía Wompi', icon: CreditCard },
-  { value: 'transferencia', label: 'Transferencia bancaria', desc: 'Te enviamos los datos para pagar', icon: Landmark },
-  { value: 'contraentrega', label: 'Pago contraentrega', desc: 'Pagas al recibir', icon: Banknote },
-];
-
-// Sin Supabase no hay dónde guardar pedidos ni cobrar en línea: el pedido se envía por WhatsApp.
-const whatsappMode = !supabase;
-const availablePayments = whatsappMode ? paymentOptions.filter((o) => o.value !== 'wompi') : paymentOptions;
+// Mientras los pedidos en línea no estén activos, el pedido se envía por WhatsApp
+// (el login con Google y los datos guardados funcionan igual).
+const whatsappMode = !onlineOrders;
+const availablePayments = AVAILABLE_PAYMENTS;
 
 function itemLabel(item: CartItem): string {
   return [item.product.name, item.product.sizeMl && `${item.product.sizeMl} ml`, VERSION_LABELS[item.version]]
@@ -44,7 +28,7 @@ function buildWhatsappOrder(form: CheckoutForm, items: CartItem[], total: number
   const lines = items.map(
     (i) => `• ${itemLabel(i)} x${i.quantity} — ${formatCOP(getVersionPrice(i.product, i.version) * i.quantity)}`,
   );
-  const payment = paymentOptions.find((o) => o.value === form.paymentMethod)?.label ?? '';
+  const payment = paymentLabel(form.paymentMethod);
   return [
     `Hola ${BUSINESS.brand}, quiero hacer este pedido:`,
     '',
@@ -63,7 +47,7 @@ function buildWhatsappOrder(form: CheckoutForm, items: CartItem[], total: number
 
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
-  const { session, profile } = useAuth();
+  const { session, profile, updateProfile } = useAuth();
   const [submitted, setSubmitted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -84,17 +68,35 @@ export default function CheckoutPage() {
     marketingOptIn: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  // Con datos guardados en la cuenta se muestra un resumen en vez del formulario; "Cambiar" lo abre.
+  const [editingShipping, setEditingShipping] = useState(false);
+  const [rememberData, setRememberData] = useState(true);
+  const prefilled = useRef(false);
 
-  // Con sesión iniciada (Google), se rellenan nombre y correo si están vacíos.
+  // Con sesión iniciada se rellenan los datos guardados en la cuenta (una sola vez, sin pisar lo que se escriba).
   useEffect(() => {
-    if (!session) return;
+    if (!session || !profile || prefilled.current) return;
+    prefilled.current = true;
+    const payment = availablePayments.some((o) => o.value === profile.preferred_payment)
+      ? profile.preferred_payment
+      : null;
     setForm((f) => ({
       ...f,
-      fullName: f.fullName || profile?.full_name || '',
+      fullName: f.fullName || profile.full_name || '',
       email: f.email || session.user.email || '',
-      marketingOptIn: f.marketingOptIn || profile?.marketing_opt_in === true,
+      phone: f.phone || profile.phone || '',
+      department: f.department || profile.department || '',
+      city: f.city || profile.city || '',
+      address: f.address || profile.address || '',
+      notes: f.notes || profile.address_notes || '',
+      paymentMethod: payment ?? f.paymentMethod,
+      marketingOptIn: f.marketingOptIn || profile.marketing_opt_in === true,
     }));
+    // La autorización ya dada con la versión vigente de la política no se vuelve a pedir.
+    if (profile.data_policy_version === BUSINESS.policyVersion) setAcceptedData(true);
   }, [session, profile]);
+
+  const showSavedSummary = Boolean(session) && hasShippingData(profile) && !editingShipping;
 
   const update = <K extends keyof CheckoutForm>(field: K, value: CheckoutForm[K]) => {
     setForm((f) => ({ ...f, [field]: value }));
@@ -123,6 +125,8 @@ export default function CheckoutPage() {
     ev.preventDefault();
     if (submitting) return;
     const valid = validate();
+    // Si un dato guardado quedó incompleto o inválido, se abre el formulario para corregirlo.
+    if (!valid) setEditingShipping(true);
     if (!acceptedData) setShowConsentError(true);
     if (!valid || !acceptedData) {
       // Lleva al primer problema: un campo con error o, si todo está bien, la casilla de autorización.
@@ -137,11 +141,28 @@ export default function CheckoutPage() {
     }
     setSubmitError(null);
 
-    // Sin Supabase configurado: el pedido se envía por WhatsApp con el resumen ya escrito.
-    if (!supabase) {
+    // Guarda los datos en la cuenta para la próxima compra. Si falla, el pedido sigue igual.
+    const saveToAccount = () =>
+      session && rememberData
+        ? updateProfile({
+            full_name: form.fullName.trim(),
+            phone: form.phone.trim(),
+            department: form.department,
+            city: form.city,
+            address: form.address.trim(),
+            address_notes: form.notes.trim() || null,
+            preferred_payment: form.paymentMethod,
+            data_consent_at: new Date().toISOString(),
+            data_policy_version: BUSINESS.policyVersion,
+          })
+        : Promise.resolve(null);
+
+    // Pedido por WhatsApp con el resumen ya escrito.
+    if (whatsappMode || !supabase) {
       const link = whatsappLink(buildWhatsappOrder(form, items, subtotal));
-      // Se abre dentro del clic del usuario para que el navegador no lo bloquee.
+      // Se abre dentro del clic del usuario (antes de cualquier espera) para que el navegador no lo bloquee.
       window.open(link, '_blank', 'noopener');
+      void saveToAccount();
       setSentOrder({ items, total: subtotal, link });
       setSubmitted(true);
       clear();
@@ -178,6 +199,8 @@ export default function CheckoutPage() {
       setSubmitting(false);
       return;
     }
+
+    await saveToAccount();
 
     if (data.checkoutUrl) {
       // El carrito se vacía en /pedido/resultado solo si el pago se aprueba.
@@ -220,7 +243,7 @@ export default function CheckoutPage() {
             {form.notes.trim() && (
               <div><dt className="inline font-medium text-ink-900">Indicaciones: </dt><dd className="inline">{form.notes}</dd></div>
             )}
-            <div><dt className="inline font-medium text-ink-900">Pago: </dt><dd className="inline">{paymentOptions.find((o) => o.value === form.paymentMethod)?.label}</dd></div>
+            <div><dt className="inline font-medium text-ink-900">Pago: </dt><dd className="inline">{paymentLabel(form.paymentMethod)}</dd></div>
           </dl>
 
           <h2 className="mb-3 mt-6 font-serif text-xl font-medium text-ink-900">Tu pedido</h2>
@@ -270,7 +293,7 @@ export default function CheckoutPage() {
           )}
           <p><span className="font-medium text-ink-900">Resumen:</span> {form.fullName} · {form.email}</p>
           <p><span className="font-medium text-ink-900">Entrega:</span> {form.address}, {form.city}, {form.department}</p>
-          <p><span className="font-medium text-ink-900">Pago:</span> {paymentOptions.find((o) => o.value === form.paymentMethod)?.label}</p>
+          <p><span className="font-medium text-ink-900">Pago:</span> {paymentLabel(form.paymentMethod)}</p>
         </div>
         <Link to="/catalogo" className="btn-primary mt-8">
           Seguir comprando
@@ -298,12 +321,53 @@ export default function CheckoutPage() {
     <div className="container-luxe py-10 lg:py-14">
       <h1 className="mb-2 font-serif text-3xl font-medium text-ink-900 sm:text-4xl">Finalizar compra</h1>
       <p className="mb-8 text-sm text-ink-500">
-        Completa tus datos para preparar tu pedido. Envío gratis a todo Colombia.
+        {showSavedSummary
+          ? 'Revisa tus datos y confirma. Envío gratis a todo Colombia.'
+          : 'Completa tus datos para preparar tu pedido. Envío gratis a todo Colombia.'}
       </p>
 
       <form onSubmit={handleSubmit} className="grid gap-10 lg:grid-cols-[1fr_400px]">
         {/* Form fields */}
         <div className="space-y-8">
+          {supabaseEnabled && !session && (
+            <div className="flex flex-col gap-4 rounded-2xl border border-ink-100 bg-ivory-100 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm font-medium text-ink-900">¿Compras seguido? Entra con Google</p>
+                <p className="mt-0.5 text-xs text-ink-500">
+                  Guardamos tus datos de envío y la próxima vez solo confirmas. Tu carrito se conserva.
+                </p>
+              </div>
+              <GoogleButton redirectPath="/checkout" compact />
+            </div>
+          )}
+
+          {showSavedSummary ? (
+            <section className="rounded-2xl border border-ink-100 bg-white p-5">
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink-900 text-gold-300">
+                    <MapPin className="h-5 w-5" />
+                  </div>
+                  <div className="text-sm text-ink-700">
+                    <h2 className="font-serif text-xl font-medium text-ink-900">Enviar a</h2>
+                    <p className="mt-1 font-medium text-ink-900">{form.fullName}</p>
+                    <p>{form.address}</p>
+                    <p>{form.city}, {form.department}</p>
+                    {form.notes.trim() && <p className="text-ink-500">{form.notes}</p>}
+                    <p className="mt-1 text-ink-500">{form.phone} · <span className="break-all">{form.email}</span></p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setEditingShipping(true)}
+                  className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-ink-200 px-4 py-2 text-xs font-medium text-ink-700 transition-colors hover:border-ink-900 hover:text-ink-900"
+                >
+                  <Pencil className="h-3.5 w-3.5" /> Cambiar
+                </button>
+              </div>
+            </section>
+          ) : (
+          <>
           <section>
             <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Datos de contacto</h2>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -361,7 +425,7 @@ export default function CheckoutPage() {
                   }}
                 >
                   <option value="">Selecciona…</option>
-                  {departments.map((d) => (
+                  {DEPARTMENTS.map((d) => (
                     <option key={d} value={d}>{d}</option>
                   ))}
                 </select>
@@ -407,6 +471,20 @@ export default function CheckoutPage() {
               </div>
             </div>
           </section>
+          </>
+          )}
+
+          {session && !showSavedSummary && (
+            <label className="-mt-4 flex cursor-pointer items-start gap-3 text-sm text-ink-700">
+              <input
+                type="checkbox"
+                checked={rememberData}
+                onChange={(e) => setRememberData(e.target.checked)}
+                className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 text-ink-900 focus:ring-ink-900"
+              />
+              <span>Guardar estos datos en mi cuenta para mis próximas compras</span>
+            </label>
+          )}
 
           <section>
             <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Método de pago</h2>

@@ -38,6 +38,7 @@ Al terminar funciona así:
 1. En Supabase, abre **SQL Editor → New query**.
 2. Pega todo el contenido de `supabase/migrations/20261109000000_init.sql` y haz clic en **Run**.
    Luego, en otra consulta nueva, haz lo mismo con `supabase/migrations/20261110000000_data_consent.sql`.
+   Y por último, en otra consulta nueva, con `supabase/migrations/20261113000000_profile_shipping.sql`: permite que cada cliente guarde su dirección, celular y método de pago en su cuenta.
 3. En tu computador, dentro de la carpeta del proyecto, ejecuta:
    ```
    npm run db:products-sql

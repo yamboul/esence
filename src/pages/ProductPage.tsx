@@ -148,6 +148,9 @@ export default function ProductPage() {
                     </div>
                     <p className="price mt-1 text-lg">{formatCOP(v.price)}</p>
                     <p className="mt-0.5 text-[11px] leading-snug text-ink-500">{VERSION_INFO[v.key].short}</p>
+                    {v.detail && (
+                      <p className="mt-1 text-[11px] font-medium leading-snug text-gold-600">{v.detail}</p>
+                    )}
                   </button>
                 ))}
               </div>

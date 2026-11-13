@@ -1,21 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronDown, Loader2, LogOut, Package, ShieldCheck, User } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { supabase, supabaseEnabled } from '@/lib/supabase';
+import { ChevronDown, Loader2, LogOut, MapPin, Package, ShieldCheck, User } from 'lucide-react';
+import { hasShippingData, useAuth, type Profile } from '@/context/AuthContext';
+import { onlineOrders, supabase, supabaseEnabled } from '@/lib/supabase';
 import { STATUS_LABELS, STATUS_STYLES, type Order } from '@/lib/orders';
+import { BUSINESS, LEGAL_ROUTES } from '@/data/business';
+import { DEPARTMENTS, MUNICIPIOS } from '@/data/colombia';
+import { AVAILABLE_PAYMENTS, paymentLabel, type PaymentMethod } from '@/data/payments';
+import GoogleButton from '@/components/GoogleButton';
 import { formatCOP, VERSION_LABELS } from '@/types';
-
-function GoogleIcon({ className = 'h-5 w-5' }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 24 24" aria-hidden="true">
-      <path fill="#4285F4" d="M23.52 12.27c0-.85-.08-1.67-.22-2.45H12v4.64h6.46a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.27-2.09 3.58-5.17 3.58-8.81z" />
-      <path fill="#34A853" d="M12 24c3.24 0 5.96-1.07 7.94-2.91l-3.88-3c-1.07.72-2.45 1.15-4.06 1.15-3.12 0-5.77-2.11-6.71-4.95H1.28v3.1A12 12 0 0 0 12 24z" />
-      <path fill="#FBBC05" d="M5.29 14.29a7.2 7.2 0 0 1 0-4.58v-3.1H1.28a12 12 0 0 0 0 10.78l4.01-3.1z" />
-      <path fill="#EA4335" d="M12 4.77c1.76 0 3.34.6 4.59 1.8l3.44-3.44A11.94 11.94 0 0 0 12 0 12 12 0 0 0 1.28 6.61l4.01 3.1C6.23 6.88 8.88 4.77 12 4.77z" />
-    </svg>
-  );
-}
 
 export default function AccountPage() {
   const { ready, session } = useAuth();
@@ -53,22 +46,12 @@ function Shell({ children, wide }: { children: React.ReactNode; wide?: boolean }
 }
 
 function SignIn() {
-  const { signInWithGoogle, signInWithPassword } = useAuth();
+  const { signInWithPassword } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showAdmin, setShowAdmin] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-
-  const google = async () => {
-    setError(null);
-    setBusy(true);
-    const err = await signInWithGoogle('/cuenta');
-    if (err) {
-      setError(err);
-      setBusy(false);
-    }
-  };
 
   const adminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,22 +70,13 @@ function SignIn() {
         </div>
         <h1 className="mt-5 font-serif text-3xl font-medium text-ink-900">Bienvenido a ESSENCE</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-500">
-          Inicia sesión o crea tu cuenta para ver tus pedidos y comprar más rápido.
+          Entra con tu cuenta de Google, sin contraseñas. Guarda tu dirección una vez y en tus próximas compras solo
+          confirmas.
         </p>
-        <button
-          onClick={google}
-          disabled={busy}
-          className="mt-6 inline-flex w-full items-center justify-center gap-3 rounded-full border border-ink-200 bg-white px-6 py-3.5 text-sm font-medium text-ink-900 transition-all hover:border-ink-900 hover:shadow-md disabled:opacity-50"
-        >
-          <GoogleIcon /> Continuar con Google
-        </button>
+        <div className="mt-6">
+          <GoogleButton redirectPath="/cuenta" />
+        </div>
         <p className="mt-3 text-xs text-ink-500">Si es tu primera vez, tu cuenta se crea automáticamente.</p>
-
-        {error && (
-          <p role="alert" className="mt-4 rounded-xl bg-rust-400/10 px-4 py-3 text-sm text-rust-500">
-            {error}
-          </p>
-        )}
       </div>
 
       <div className="mt-6 rounded-2xl border border-ink-100">
@@ -142,6 +116,11 @@ function SignIn() {
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
+            {error && (
+              <p role="alert" className="rounded-xl bg-rust-400/10 px-4 py-3 text-sm text-rust-500">
+                {error}
+              </p>
+            )}
             <button type="submit" disabled={busy} className="btn-primary w-full">
               {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Ingresar'}
             </button>
@@ -159,7 +138,7 @@ function SignedIn() {
   const [optInError, setOptInError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!supabase || !session) return;
+    if (!supabase || !session || !onlineOrders) return;
     supabase
       .from('orders')
       .select('*')
@@ -207,6 +186,8 @@ function SignedIn() {
         </Link>
       )}
 
+      {profile && <ShippingData profile={profile} />}
+
       <label className="mt-8 flex cursor-pointer items-start gap-3 rounded-2xl border border-ink-100 bg-ivory-100 p-5 text-sm text-ink-700">
         <input
           type="checkbox"
@@ -224,7 +205,17 @@ function SignedIn() {
 
       <section className="mt-10">
         <h2 className="mb-4 font-serif text-2xl font-medium text-ink-900">Mis pedidos</h2>
-        {orders === null ? (
+        {!onlineOrders ? (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-ink-200 px-6 py-10 text-center">
+            <Package className="h-8 w-8 text-ink-300" />
+            <p className="mt-3 max-w-sm text-sm text-ink-500">
+              Tus pedidos se confirman por WhatsApp. Allí te contamos el estado de tu envío.
+            </p>
+            <Link to="/catalogo" className="btn-outline mt-5">
+              Explorar perfumes
+            </Link>
+          </div>
+        ) : orders === null ? (
           <Loader2 className="h-5 w-5 animate-spin text-ink-400" />
         ) : orders.length === 0 ? (
           <div className="flex flex-col items-center rounded-2xl border border-dashed border-ink-200 py-12 text-center">
@@ -257,5 +248,225 @@ function SignedIn() {
         )}
       </section>
     </Shell>
+  );
+}
+
+interface ShippingDraft {
+  fullName: string;
+  phone: string;
+  department: string;
+  city: string;
+  address: string;
+  notes: string;
+  payment: PaymentMethod | '';
+}
+
+const draftFrom = (p: Profile): ShippingDraft => ({
+  fullName: p.full_name ?? '',
+  phone: p.phone ?? '',
+  department: p.department ?? '',
+  city: p.city ?? '',
+  address: p.address ?? '',
+  notes: p.address_notes ?? '',
+  payment: p.preferred_payment ?? '',
+});
+
+// Datos de envío guardados en la cuenta: el checkout los usa para no volver a escribirlos.
+function ShippingData({ profile }: { profile: Profile }) {
+  const { updateProfile } = useAuth();
+  const complete = hasShippingData(profile);
+  const [editing, setEditing] = useState(!complete);
+  const [draft, setDraft] = useState<ShippingDraft>(() => draftFrom(profile));
+  const [errors, setErrors] = useState<Partial<Record<keyof ShippingDraft, string>>>({});
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const set = <K extends keyof ShippingDraft>(field: K, value: ShippingDraft[K]) => {
+    setDraft((d) => ({ ...d, [field]: value }));
+    setErrors((e) => ({ ...e, [field]: undefined }));
+    setSaved(false);
+  };
+
+  const save = async (ev: React.FormEvent) => {
+    ev.preventDefault();
+    const e: typeof errors = {};
+    if (!draft.fullName.trim()) e.fullName = 'Ingresa tu nombre completo';
+    if (!/^[0-9+\s()-]{7,}$/.test(draft.phone.trim())) e.phone = 'Ingresa un celular válido';
+    if (!draft.department) e.department = 'Selecciona un departamento';
+    if (!draft.city) e.city = 'Selecciona tu ciudad o municipio';
+    if (!draft.address.trim()) e.address = 'Ingresa tu dirección';
+    setErrors(e);
+    if (Object.keys(e).length) return;
+
+    setSaving(true);
+    setSaveError(null);
+    const err = await updateProfile({
+      full_name: draft.fullName.trim(),
+      phone: draft.phone.trim(),
+      department: draft.department,
+      city: draft.city,
+      address: draft.address.trim(),
+      address_notes: draft.notes.trim() || null,
+      preferred_payment: draft.payment || null,
+      data_consent_at: new Date().toISOString(),
+      data_policy_version: BUSINESS.policyVersion,
+    });
+    setSaving(false);
+    if (err) {
+      setSaveError(err);
+      return;
+    }
+    setSaved(true);
+    setEditing(false);
+  };
+
+  const fieldClass = (bad?: string) => `input-luxe ${bad ? 'border-rust-500' : ''}`;
+
+  return (
+    <section className="mt-8 rounded-2xl border border-ink-100 bg-white p-6">
+      <div className="flex items-start justify-between gap-4">
+        <div className="flex gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-ink-900 text-gold-300">
+            <MapPin className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="font-serif text-2xl font-medium text-ink-900">Mis datos de envío</h2>
+            <p className="mt-0.5 text-sm text-ink-500">
+              {complete
+                ? 'Se usan automáticamente al finalizar tu compra.'
+                : 'Guárdalos una vez y en tus próximas compras solo tendrás que confirmar.'}
+            </p>
+          </div>
+        </div>
+        {!editing && (
+          <button
+            type="button"
+            onClick={() => {
+              setDraft(draftFrom(profile));
+              setEditing(true);
+              setSaved(false);
+            }}
+            className="shrink-0 rounded-full border border-ink-200 px-4 py-2 text-xs font-medium text-ink-700 transition-colors hover:border-ink-900 hover:text-ink-900"
+          >
+            Editar
+          </button>
+        )}
+      </div>
+
+      {!editing ? (
+        <div className="mt-5 grid gap-1 text-sm text-ink-700 sm:pl-[3.25rem]">
+          <p className="font-medium text-ink-900">{profile.full_name}</p>
+          <p>{profile.address}</p>
+          <p>{profile.city}, {profile.department}</p>
+          {profile.address_notes && <p className="text-ink-500">{profile.address_notes}</p>}
+          <p className="text-ink-500">Celular: {profile.phone}</p>
+          {profile.preferred_payment && (
+            <p className="text-ink-500">Pago preferido: {paymentLabel(profile.preferred_payment)}</p>
+          )}
+          {saved && (
+            <p role="status" className="mt-2 text-sm font-medium text-sage-600">Datos guardados.</p>
+          )}
+        </div>
+      ) : (
+        <form onSubmit={save} className="mt-6 grid gap-4 sm:grid-cols-2" noValidate>
+          <div className="sm:col-span-2">
+            <label className="label-luxe" htmlFor="ship-name">Nombre completo</label>
+            <input id="ship-name" autoComplete="name" className={fieldClass(errors.fullName)} value={draft.fullName} onChange={(e) => set('fullName', e.target.value)} />
+            {errors.fullName && <p className="mt-1 text-xs text-rust-500">{errors.fullName}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label-luxe" htmlFor="ship-phone">Celular</label>
+            <input id="ship-phone" type="tel" autoComplete="tel" inputMode="tel" placeholder="300 000 0000" className={fieldClass(errors.phone)} value={draft.phone} onChange={(e) => set('phone', e.target.value)} />
+            {errors.phone && <p className="mt-1 text-xs text-rust-500">{errors.phone}</p>}
+          </div>
+          <div>
+            <label className="label-luxe" htmlFor="ship-dep">Departamento</label>
+            <select
+              id="ship-dep"
+              className={fieldClass(errors.department)}
+              value={draft.department}
+              onChange={(e) => {
+                const dep = e.target.value;
+                const options = MUNICIPIOS[dep] ?? [];
+                setDraft((d) => ({ ...d, department: dep, city: options.length === 1 ? options[0] : '' }));
+                setErrors((er) => ({ ...er, department: undefined, city: undefined }));
+                setSaved(false);
+              }}
+            >
+              <option value="">Selecciona…</option>
+              {DEPARTMENTS.map((d) => <option key={d} value={d}>{d}</option>)}
+            </select>
+            {errors.department && <p className="mt-1 text-xs text-rust-500">{errors.department}</p>}
+          </div>
+          <div>
+            <label className="label-luxe" htmlFor="ship-city">Ciudad o municipio</label>
+            <select
+              id="ship-city"
+              className={`${fieldClass(errors.city)} disabled:cursor-not-allowed disabled:opacity-60`}
+              value={draft.city}
+              disabled={!draft.department}
+              onChange={(e) => set('city', e.target.value)}
+            >
+              <option value="">{draft.department ? 'Selecciona…' : 'Primero elige el departamento'}</option>
+              {(MUNICIPIOS[draft.department] ?? []).map((m) => <option key={m} value={m}>{m}</option>)}
+            </select>
+            {errors.city && <p className="mt-1 text-xs text-rust-500">{errors.city}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label-luxe" htmlFor="ship-address">Dirección</label>
+            <input id="ship-address" autoComplete="street-address" placeholder="Calle 00 # 00-00, Barrio" className={fieldClass(errors.address)} value={draft.address} onChange={(e) => set('address', e.target.value)} />
+            {errors.address && <p className="mt-1 text-xs text-rust-500">{errors.address}</p>}
+          </div>
+          <div className="sm:col-span-2">
+            <label className="label-luxe" htmlFor="ship-notes">Indicaciones (opcional)</label>
+            <input id="ship-notes" placeholder="Torre, apartamento, portería…" className="input-luxe" value={draft.notes} onChange={(e) => set('notes', e.target.value)} />
+          </div>
+          <fieldset className="sm:col-span-2">
+            <legend className="label-luxe">Método de pago preferido (opcional)</legend>
+            <div className="flex flex-wrap gap-2">
+              {AVAILABLE_PAYMENTS.map((o) => (
+                <label
+                  key={o.value}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors ${
+                    draft.payment === o.value ? 'border-ink-900 bg-ink-900 text-ivory-50' : 'border-ink-200 text-ink-700 hover:border-ink-400'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="ship-payment"
+                    className="sr-only"
+                    checked={draft.payment === o.value}
+                    onChange={() => set('payment', o.value)}
+                  />
+                  <o.icon className="h-4 w-4" /> {o.label}
+                </label>
+              ))}
+            </div>
+          </fieldset>
+
+          {saveError && (
+            <p role="alert" className="rounded-xl bg-rust-400/10 px-4 py-3 text-sm text-rust-500 sm:col-span-2">{saveError}</p>
+          )}
+          <div className="flex flex-col gap-3 sm:col-span-2 sm:flex-row sm:items-center">
+            <button type="submit" disabled={saving} className="btn-primary">
+              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Guardar datos'}
+            </button>
+            {complete && (
+              <button type="button" onClick={() => setEditing(false)} className="btn-ghost">
+                Cancelar
+              </button>
+            )}
+          </div>
+          <p className="text-xs leading-relaxed text-ink-500 sm:col-span-2">
+            Al guardar autorizas a {BUSINESS.brand} a usar estos datos para enviar tus pedidos, según la{' '}
+            <Link to={LEGAL_ROUTES.privacy} className="underline underline-offset-2 hover:text-ink-900">
+              política de tratamiento de datos
+            </Link>
+            .
+          </p>
+        </form>
+      )}
+    </section>
   );
 }
