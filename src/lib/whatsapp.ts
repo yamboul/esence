@@ -1,4 +1,4 @@
-// WhatsApp solo para dudas de clientes; los pedidos se hacen por el checkout.
+// WhatsApp para dudas de clientes. Sin Supabase configurado, el checkout también envía los pedidos por aquí.
 // Número en formato internacional sin "+" ni espacios (requerido por wa.me).
 export const WHATSAPP_NUMBER = '573196498196';
 export const WHATSAPP_DISPLAY = '+57 319 649 8196';

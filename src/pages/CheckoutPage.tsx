@@ -1,13 +1,14 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Check, Lock, ShoppingBag, CreditCard, Landmark, Banknote, Loader2 } from 'lucide-react';
+import { Check, Lock, ShoppingBag, CreditCard, Landmark, Banknote, Loader2, MessageCircle } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { supabase, functionErrorMessage } from '@/lib/supabase';
 import { PENDING_ORDER_KEY } from '@/lib/orders';
+import { whatsappLink } from '@/lib/whatsapp';
 import { BUSINESS } from '@/data/business';
 import DataConsentCheckbox from '@/components/DataConsentCheckbox';
-import { formatCOP, VERSION_LABELS, getVersionPrice, type CheckoutForm } from '@/types';
+import { formatCOP, VERSION_LABELS, getVersionPrice, type CartItem, type CheckoutForm } from '@/types';
 
 const departments = [
   'Amazonas', 'Antioquia', 'Arauca', 'Atlántico', 'Bolívar', 'Boyacá', 'Caldas',
@@ -28,6 +29,37 @@ const paymentOptions: {
   { value: 'contraentrega', label: 'Pago contraentrega', desc: 'Pagas al recibir', icon: Banknote },
 ];
 
+// Sin Supabase no hay dónde guardar pedidos ni cobrar en línea: el pedido se envía por WhatsApp.
+const whatsappMode = !supabase;
+const availablePayments = whatsappMode ? paymentOptions.filter((o) => o.value !== 'wompi') : paymentOptions;
+
+function itemLabel(item: CartItem): string {
+  return [item.product.name, item.product.sizeMl && `${item.product.sizeMl} ml`, VERSION_LABELS[item.version]]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function buildWhatsappOrder(form: CheckoutForm, items: CartItem[], total: number): string {
+  const lines = items.map(
+    (i) => `• ${itemLabel(i)} x${i.quantity} — ${formatCOP(getVersionPrice(i.product, i.version) * i.quantity)}`,
+  );
+  const payment = paymentOptions.find((o) => o.value === form.paymentMethod)?.label ?? '';
+  return [
+    `Hola ${BUSINESS.brand}, quiero hacer este pedido:`,
+    '',
+    ...lines,
+    `*Total: ${formatCOP(total)}* (envío gratis)`,
+    '',
+    `Nombre: ${form.fullName.trim()}`,
+    `Teléfono: ${form.phone.trim()}`,
+    `Correo: ${form.email.trim()}`,
+    `Ciudad: ${form.city.trim()}, ${form.department}`,
+    `Dirección: ${form.address.trim()}`,
+    ...(form.notes.trim() ? [`Indicaciones: ${form.notes.trim()}`] : []),
+    `Pago: ${payment}`,
+  ].join('\n');
+}
+
 export default function CheckoutPage() {
   const { items, subtotal, clear } = useCart();
   const { session, profile } = useAuth();
@@ -35,6 +67,8 @@ export default function CheckoutPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [orderRef, setOrderRef] = useState<string | null>(null);
+  // Copia del pedido enviado por WhatsApp (el carrito se vacía al enviarlo).
+  const [sentOrder, setSentOrder] = useState<{ items: CartItem[]; total: number; link: string } | null>(null);
   const [acceptedData, setAcceptedData] = useState(false);
   const [showConsentError, setShowConsentError] = useState(false);
   const [form, setForm] = useState<CheckoutForm>({
@@ -45,7 +79,7 @@ export default function CheckoutPage() {
     city: '',
     address: '',
     notes: '',
-    paymentMethod: 'wompi',
+    paymentMethod: whatsappMode ? 'contraentrega' : 'wompi',
     marketingOptIn: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -102,8 +136,12 @@ export default function CheckoutPage() {
     }
     setSubmitError(null);
 
-    // Sin Supabase configurado: modo demostración (no se guarda ni se cobra).
+    // Sin Supabase configurado: el pedido se envía por WhatsApp con el resumen ya escrito.
     if (!supabase) {
+      const link = whatsappLink(buildWhatsappOrder(form, items, subtotal));
+      // Se abre dentro del clic del usuario para que el navegador no lo bloquee.
+      window.open(link, '_blank', 'noopener');
+      setSentOrder({ items, total: subtotal, link });
       setSubmitted(true);
       clear();
       window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -158,6 +196,60 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  if (submitted && sentOrder) {
+    return (
+      <div className="container-luxe flex flex-col items-center py-16 text-center sm:py-24">
+        <div className="flex h-20 w-20 items-center justify-center rounded-full bg-green-600 text-white shadow-lg shadow-green-600/30">
+          <Check className="h-11 w-11" strokeWidth={3} />
+        </div>
+        <h1 className="mt-6 font-serif text-4xl font-semibold tracking-wide text-ink-900">PEDIDO ENVIADO</h1>
+        <p className="mt-3 max-w-md text-ink-600">
+          Gracias por tu compra, {form.fullName.trim().split(' ')[0]}. Te contactaremos por WhatsApp para confirmar tu
+          pedido y coordinar la entrega. El envío es gratis a cualquier lugar de Colombia.
+        </p>
+
+        <div className="mt-8 w-full max-w-md rounded-2xl border border-ink-100 bg-ivory-100 p-6 text-left text-sm text-ink-700">
+          <h2 className="mb-3 font-serif text-xl font-medium text-ink-900">Datos de envío</h2>
+          <dl className="space-y-1.5">
+            <div><dt className="inline font-medium text-ink-900">Nombre: </dt><dd className="inline">{form.fullName}</dd></div>
+            <div><dt className="inline font-medium text-ink-900">Teléfono: </dt><dd className="inline">{form.phone}</dd></div>
+            <div><dt className="inline font-medium text-ink-900">Correo: </dt><dd className="inline break-all">{form.email}</dd></div>
+            <div><dt className="inline font-medium text-ink-900">Dirección: </dt><dd className="inline">{form.address}</dd></div>
+            <div><dt className="inline font-medium text-ink-900">Ciudad: </dt><dd className="inline">{form.city}, {form.department}</dd></div>
+            {form.notes.trim() && (
+              <div><dt className="inline font-medium text-ink-900">Indicaciones: </dt><dd className="inline">{form.notes}</dd></div>
+            )}
+            <div><dt className="inline font-medium text-ink-900">Pago: </dt><dd className="inline">{paymentOptions.find((o) => o.value === form.paymentMethod)?.label}</dd></div>
+          </dl>
+
+          <h2 className="mb-3 mt-6 font-serif text-xl font-medium text-ink-900">Tu pedido</h2>
+          <ul className="space-y-1.5">
+            {sentOrder.items.map((i) => (
+              <li key={`${i.product.id}__${i.version}`} className="flex justify-between gap-3">
+                <span>{itemLabel(i)} x{i.quantity}</span>
+                <span className="tabular-nums">{formatCOP(getVersionPrice(i.product, i.version) * i.quantity)}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-3 flex items-baseline justify-between border-t border-ink-200 pt-3 text-ink-900">
+            <span className="font-serif text-lg font-semibold">Total</span>
+            <span className="price text-lg">{formatCOP(sentOrder.total)}</span>
+          </div>
+        </div>
+
+        <p className="mt-6 max-w-md text-xs text-ink-500">
+          ¿No se abrió WhatsApp o no enviaste el mensaje? Tócalo aquí para enviarlo y confirmar tu pedido.
+        </p>
+        <a href={sentOrder.link} target="_blank" rel="noopener noreferrer" className="btn-ghost mt-2">
+          <MessageCircle className="h-4 w-4" /> Enviar pedido por WhatsApp
+        </a>
+        <Link to="/catalogo" className="btn-primary mt-4">
+          Seguir comprando
+        </Link>
+      </div>
+    );
+  }
+
   if (submitted) {
     return (
       <div className="container-luxe flex flex-col items-center justify-center py-24 text-center">
@@ -166,9 +258,7 @@ export default function CheckoutPage() {
         </div>
         <h1 className="mt-6 font-serif text-4xl font-medium text-ink-900">¡Pedido recibido!</h1>
         <p className="mt-3 max-w-md text-ink-600">
-          {!orderRef
-            ? 'Pedido registrado en modo demostración (la tienda aún no está conectada).'
-            : form.paymentMethod === 'transferencia'
+          {form.paymentMethod === 'transferencia'
             ? 'Te contactaremos por WhatsApp o correo con los datos bancarios para completar el pago.'
             : 'Te contactaremos para coordinar la entrega. Pagas al recibir tu pedido.'}{' '}
           El envío es gratis a cualquier lugar de Colombia.
@@ -307,8 +397,8 @@ export default function CheckoutPage() {
 
           <section>
             <h2 className="mb-4 font-serif text-xl font-medium text-ink-900">Método de pago</h2>
-            <div className="grid gap-3 md:grid-cols-3">
-              {paymentOptions.map((opt) => (
+            <div className={`grid gap-3 ${availablePayments.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+              {availablePayments.map((opt) => (
                 <label
                   key={opt.value}
                   className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition-all ${
@@ -429,6 +519,10 @@ export default function CheckoutPage() {
               ) : form.paymentMethod === 'wompi' ? (
                 <>
                   <Lock className="h-4 w-4" /> Ir a pagar {formatCOP(subtotal)}
+                </>
+              ) : whatsappMode ? (
+                <>
+                  <MessageCircle className="h-4 w-4" /> Confirmar pedido por WhatsApp
                 </>
               ) : (
                 'Confirmar pedido'
