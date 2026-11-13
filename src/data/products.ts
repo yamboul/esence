@@ -534,6 +534,31 @@ export const products: Product[] = [
     inStock: true,
     demo: false,
   },
+  {
+    id: 'cloud-ariana-grande',
+    name: 'Cloud',
+    brand: 'Ariana Grande',
+    category: 'mujer',
+    concentration: 'Eau de Parfum',
+    image: '/images/cloud.webp',
+    gallery: ['/images/cloud.webp', '/images/cloud-2.webp'],
+    description:
+      'Dulce, suave y soñador como su nombre. Cloud abre con flor de lavanda, pera jugosa y bergamota, una salida ligera y aireada. En el corazón aparecen la crema de coco, el praliné y la orquídea de vainilla, que lo vuelven cremoso y adictivo, y el fondo de almizcle y maderas deja una estela cálida y envolvente. Un favorito para el día a día y para quien ama los aromas dulces.',
+    family: 'Ambarada gourmand',
+    occasions: ['Día', 'Uso diario', 'Citas'],
+    notes: {
+      salida: ['Flor de lavanda', 'Pera', 'Bergamota'],
+      corazon: ['Crema de coco', 'Praliné', 'Orquídea de vainilla'],
+      fondo: ['Almizcle', 'Maderas'],
+    },
+    versions: [{ key: 'premium', label: 'Premium', price: 155000 }],
+    featured: false,
+    bestseller: false,
+    novelty: true,
+    onSale: false,
+    inStock: true,
+    demo: false,
+  },
 ];
 
 export const brands = Array.from(new Set(products.map((p) => p.brand))).sort();
