@@ -7,6 +7,7 @@ import { supabase, functionErrorMessage } from '@/lib/supabase';
 import { PENDING_ORDER_KEY } from '@/lib/orders';
 import { whatsappLink } from '@/lib/whatsapp';
 import { BUSINESS } from '@/data/business';
+import { MUNICIPIOS } from '@/data/colombia';
 import DataConsentCheckbox from '@/components/DataConsentCheckbox';
 import { formatCOP, VERSION_LABELS, getVersionPrice, type CartItem, type CheckoutForm } from '@/types';
 
@@ -112,7 +113,7 @@ export default function CheckoutPage() {
     if (!/^[0-9+\s()-]{7,}$/.test(form.phone.trim())) e.phone = 'Ingresa un teléfono válido';
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) e.email = 'Ingresa un correo válido';
     if (!form.department) e.department = 'Selecciona un departamento';
-    if (!form.city.trim()) e.city = 'Ingresa tu ciudad o municipio';
+    if (!form.city.trim()) e.city = 'Selecciona tu ciudad o municipio';
     if (!form.address.trim()) e.address = 'Ingresa tu dirección de entrega';
     setErrors(e);
     return Object.keys(e).length === 0;
@@ -351,7 +352,13 @@ export default function CheckoutPage() {
                   id="department"
                   className={`input-luxe ${errors.department ? 'border-rust-500' : ''}`}
                   value={form.department}
-                  onChange={(e) => update('department', e.target.value)}
+                  onChange={(e) => {
+                    const dep = e.target.value;
+                    update('department', dep);
+                    // Bogotá tiene un solo municipio; en los demás se elige de la lista del departamento.
+                    const options = MUNICIPIOS[dep] ?? [];
+                    update('city', options.length === 1 ? options[0] : '');
+                  }}
                 >
                   <option value="">Selecciona…</option>
                   {departments.map((d) => (
@@ -362,12 +369,18 @@ export default function CheckoutPage() {
               </div>
               <div>
                 <label className="label-luxe" htmlFor="city">Ciudad o municipio</label>
-                <input
+                <select
                   id="city"
-                  className={`input-luxe ${errors.city ? 'border-rust-500' : ''}`}
+                  className={`input-luxe ${errors.city ? 'border-rust-500' : ''} disabled:cursor-not-allowed disabled:opacity-60`}
                   value={form.city}
                   onChange={(e) => update('city', e.target.value)}
-                />
+                  disabled={!form.department}
+                >
+                  <option value="">{form.department ? 'Selecciona…' : 'Primero elige el departamento'}</option>
+                  {(MUNICIPIOS[form.department] ?? []).map((m) => (
+                    <option key={m} value={m}>{m}</option>
+                  ))}
+                </select>
                 {errors.city && <p className="mt-1 text-xs text-rust-500">{errors.city}</p>}
               </div>
               <div className="sm:col-span-2">
