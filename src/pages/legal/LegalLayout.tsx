@@ -22,7 +22,7 @@ export function LegalLayout({ title, intro, children }: LegalLayoutProps) {
   return (
     <div className="container-luxe py-12 md:py-20">
       <div className="mx-auto max-w-3xl">
-        <nav aria-label="Ruta de navegación" className="mb-8 text-xs text-ink-400">
+        <nav aria-label="Ruta de navegación" className="mb-8 text-xs text-ink-500">
           <Link to="/" className="hover:text-ink-900">
             Inicio
           </Link>
@@ -32,7 +32,7 @@ export function LegalLayout({ title, intro, children }: LegalLayoutProps) {
 
         <p className="section-eyebrow">Información legal</p>
         <h1 className="font-serif text-3xl font-medium leading-tight text-ink-900 text-balance sm:text-4xl">{title}</h1>
-        <p className="mt-3 text-sm text-ink-400">Última actualización: {BUSINESS.policyDate}</p>
+        <p className="mt-3 text-sm text-ink-500">Última actualización: {BUSINESS.policyDate}</p>
 
         {intro && <p className="mt-8 text-base leading-relaxed text-ink-700">{intro}</p>}
 

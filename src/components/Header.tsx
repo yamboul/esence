@@ -54,9 +54,10 @@ export default function Header() {
       <div className="container-luxe">
         <div className="flex h-16 items-center justify-between lg:h-20">
           <button
-            className="lg:hidden text-ink-900"
+            className="-ml-2.5 p-2.5 text-ink-900 lg:hidden"
             onClick={() => setMobileOpen((v) => !v)}
-            aria-label="Abrir menú"
+            aria-label={mobileOpen ? 'Cerrar menú' : 'Abrir menú'}
+            aria-expanded={mobileOpen}
           >
             {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
           </button>
@@ -79,11 +80,11 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-1.5 sm:gap-3">
+          <div className="-mr-2.5 flex items-center gap-0.5 sm:gap-2">
             <button
               onClick={() => setSearchOpen((v) => !v)}
               aria-label="Buscar"
-              className="rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100"
+              className="rounded-full p-2.5 text-ink-700 transition-colors hover:bg-ink-100"
             >
               <Search className="h-5 w-5" />
             </button>
@@ -91,7 +92,7 @@ export default function Header() {
             <button
               onClick={() => setOpen(true)}
               aria-label="Carrito"
-              className="relative rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100"
+              className="relative rounded-full p-2.5 text-ink-700 transition-colors hover:bg-ink-100"
             >
               <ShoppingBag className="h-5 w-5" />
               {count > 0 && (
@@ -175,7 +176,7 @@ function UserMenu() {
     };
   }, [open]);
 
-  const iconClass = 'relative hidden sm:block rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100';
+  const iconClass = 'relative hidden sm:block rounded-full p-2.5 text-ink-700 transition-colors hover:bg-ink-100';
 
   if (!session) {
     return (
@@ -194,7 +195,7 @@ function UserMenu() {
         aria-label="Mi cuenta"
         aria-expanded={open}
         aria-haspopup="menu"
-        className="relative block rounded-full p-2 text-ink-700 transition-colors hover:bg-ink-100"
+        className="relative block rounded-full p-2.5 text-ink-700 transition-colors hover:bg-ink-100"
       >
         <User className="h-5 w-5" />
         <span className={`absolute right-1 top-1 h-2 w-2 rounded-full ${isAdmin ? 'bg-gold-400' : 'bg-sage-500'}`} />

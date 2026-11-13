@@ -125,7 +125,7 @@ export default function HomePage() {
             Ver todo <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           {featured.map((p) => (
             <ProductCard key={p.id} product={p} onAdd={handleAdd} />
           ))}
@@ -218,7 +218,7 @@ export default function HomePage() {
             Ver todo <ArrowRight className="h-4 w-4" />
           </Link>
         </div>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
           {bestsellers.map((p) => (
             <ProductCard key={p.id} product={p} onAdd={handleAdd} />
           ))}
@@ -251,7 +251,7 @@ export default function HomePage() {
             <div className="grid gap-12 lg:grid-cols-2">
               <div>
                 <h3 className="mb-5 font-serif text-xl text-ink-900">Novedades</h3>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-2 gap-3 sm:gap-5">
                   {novelties.slice(0, 2).map((p) => (
                     <ProductCard key={p.id} product={p} onAdd={handleAdd} />
                   ))}
@@ -259,7 +259,7 @@ export default function HomePage() {
               </div>
               <div>
                 <h3 className="mb-5 font-serif text-xl text-ink-900">Ofertas</h3>
-                <div className="grid grid-cols-2 gap-5">
+                <div className="grid grid-cols-2 gap-3 sm:gap-5">
                   {onSale.slice(0, 2).map((p) => (
                     <ProductCard key={p.id} product={p} onAdd={handleAdd} />
                   ))}
@@ -267,7 +267,7 @@ export default function HomePage() {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
               {(novelties.length > 0 ? novelties : onSale).map((p) => (
                 <ProductCard key={p.id} product={p} onAdd={handleAdd} />
               ))}

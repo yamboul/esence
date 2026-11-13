@@ -96,7 +96,7 @@ function SignIn() {
         >
           <GoogleIcon /> Continuar con Google
         </button>
-        <p className="mt-3 text-xs text-ink-400">Si es tu primera vez, tu cuenta se crea automáticamente.</p>
+        <p className="mt-3 text-xs text-ink-500">Si es tu primera vez, tu cuenta se crea automáticamente.</p>
 
         {error && (
           <p role="alert" className="mt-4 rounded-xl bg-rust-400/10 px-4 py-3 text-sm text-rust-500">
@@ -248,7 +248,7 @@ function SignedIn() {
                   {o.items.map((i) => `${i.name} (${VERSION_LABELS[i.version]}) x${i.quantity}`).join(', ')}
                 </p>
                 <div className="mt-2 flex justify-between text-sm">
-                  <span className="text-ink-400">{new Date(o.created_at).toLocaleDateString('es-CO', { dateStyle: 'medium' })}</span>
+                  <span className="text-ink-500">{new Date(o.created_at).toLocaleDateString('es-CO', { dateStyle: 'medium' })}</span>
                   <span className="price">{formatCOP(o.total)}</span>
                 </div>
               </li>

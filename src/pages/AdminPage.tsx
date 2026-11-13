@@ -164,7 +164,7 @@ function OrdersTab() {
                     <span className="mt-0.5 block truncate text-sm text-ink-600">
                       {o.full_name} · {o.city}
                     </span>
-                    <span className="block text-xs text-ink-400">
+                    <span className="block text-xs text-ink-500">
                       {new Date(o.created_at).toLocaleString('es-CO', { dateStyle: 'medium', timeStyle: 'short' })} ·{' '}
                       {PAYMENT_LABELS[o.payment_method]}
                       {o.wompi_payment_type ? ` (${o.wompi_payment_type})` : ''}
@@ -304,7 +304,7 @@ function AdminsTab() {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-ink-900">
                     {a.full_name || a.email}
-                    {a.id === session?.user.id && <span className="ml-2 text-xs font-normal text-ink-400">(tú)</span>}
+                    {a.id === session?.user.id && <span className="ml-2 text-xs font-normal text-ink-500">(tú)</span>}
                   </p>
                   <p className="truncate text-xs text-ink-500">{a.email}</p>
                 </div>

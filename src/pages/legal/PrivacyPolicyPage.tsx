@@ -176,7 +176,7 @@ export default function PrivacyPolicyPage() {
           página con su fecha de actualización. Si el cambio afecta de forma importante el uso de tus datos, te lo
           informaremos por un medio visible antes de aplicarlo.
         </p>
-        <p className="text-sm text-ink-400">Versión vigente: {BUSINESS.policyVersion}</p>
+        <p className="text-sm text-ink-500">Versión vigente: {BUSINESS.policyVersion}</p>
       </Section>
     </LegalLayout>
   );

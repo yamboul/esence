@@ -166,7 +166,7 @@ export default function ProductPage() {
               </p>
             </div>
           )}
-          <p className="mt-2 text-xs text-ink-400">Precio en pesos colombianos (COP)</p>
+          <p className="mt-2 text-xs text-ink-500">Precio en pesos colombianos (COP)</p>
 
           <p className="mt-6 leading-relaxed text-ink-700">{product.description}</p>
 
@@ -253,7 +253,7 @@ export default function ProductPage() {
               <span className="text-rust-500">Agotado</span>
             )}
             {product.demo && (
-              <p className="mt-1 text-xs text-ink-400">
+              <p className="mt-1 text-xs text-ink-500">
                 Producto de demostración. Precios y existencias son ilustrativos.
               </p>
             )}
@@ -275,7 +275,7 @@ export default function ProductPage() {
           <h2 className="mb-8 font-serif text-2xl font-medium text-ink-900 sm:text-3xl">
             También te puede gustar
           </h2>
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-6 lg:grid-cols-4">
             {related.map((p) => (
               <ProductCard key={p.id} product={p} onAdd={(prod) => add(prod, 'premium')} />
             ))}

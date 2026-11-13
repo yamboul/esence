@@ -441,7 +441,7 @@ export default function CheckoutPage() {
                 </label>
               ))}
             </div>
-            <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-400">
+            <p className="mt-3 flex items-center gap-1.5 text-xs text-ink-500">
               <Lock className="h-3.5 w-3.5" />
               {form.paymentMethod === 'wompi'
                 ? 'Pagarás en la plataforma segura de Wompi (Bancolombia). ESSENCE no guarda datos de tarjetas.'

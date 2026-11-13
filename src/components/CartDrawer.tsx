@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ShoppingBag, Trash2, X, Plus, Minus } from 'lucide-react';
 import { useCart } from '@/context/CartContext';
@@ -5,6 +6,16 @@ import { formatCOP, VERSION_LABELS, getVersionPrice } from '@/types';
 
 export default function CartDrawer() {
   const { items, isOpen, setOpen, setQty, remove, subtotal, count } = useCart();
+
+  // Escape cierra el carrito (comodidad en computador).
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, setOpen]);
 
   return (
     <>
@@ -25,7 +36,7 @@ export default function CartDrawer() {
           <div className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5 text-ink-700" />
             <h2 className="font-serif text-xl font-medium text-ink-900">
-              Tu carrito {count > 0 && <span className="text-sm text-ink-400">({count})</span>}
+              Tu carrito {count > 0 && <span className="text-sm text-ink-500">({count})</span>}
             </h2>
           </div>
           <button
@@ -85,7 +96,7 @@ export default function CartDrawer() {
                               {VERSION_LABELS[item.version]}
                             </span>
                             {item.product.sizeMl && (
-                              <p className="mt-0.5 text-xs text-ink-400">{item.product.sizeMl} ml</p>
+                              <p className="mt-0.5 text-xs text-ink-500">{item.product.sizeMl} ml</p>
                             )}
                           </div>
                           <button
@@ -130,7 +141,7 @@ export default function CartDrawer() {
                 <span>Subtotal</span>
                 <span className="price text-lg">{formatCOP(subtotal)}</span>
               </div>
-              <p className="mt-1 text-xs text-ink-400">
+              <p className="mt-1 text-xs text-ink-500">
                 Envío gratis a todo Colombia.
               </p>
               <Link

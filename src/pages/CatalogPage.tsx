@@ -213,7 +213,7 @@ export default function CatalogPage() {
                       className="h-4 w-4 border-ink-300 text-ink-900 focus:ring-ink-900"
                     />
                     {r.label}
-                    <span className="text-xs text-ink-400">({rangeCounts[i]})</span>
+                    <span className="text-xs text-ink-500">({rangeCounts[i]})</span>
                   </label>
                 ))}
                 <button
@@ -276,7 +276,7 @@ export default function CatalogPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:gap-6 xl:grid-cols-3">
               {filtered.map((p) => (
                 <ProductCard key={p.id} product={p} onAdd={(prod) => add(prod, 'premium')} />
               ))}
