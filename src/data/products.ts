@@ -9,7 +9,15 @@ export const products: Product[] = [
     concentration: 'Eau de Parfum',
     image: '/images/image copy 3.png',
     gallery: ['/images/image copy 3.png'],
-    description: 'Yara de Lattafa, presentada con la información disponible del producto.',
+    description:
+      'Dulce, suave y femenina como un abrazo. Yara abre con orquídea, heliotropo y mandarina, una salida delicada y empolvada, y pasa a un corazón de frutas tropicales con un toque goloso que la vuelve irresistible. El fondo de vainilla, sándalo y almizcle deja una estela cremosa y envolvente que dura todo el día. Perfecta para el día a día y para quien ama los aromas dulces.',
+    family: 'Floral gourmand',
+    occasions: ['Día', 'Citas', 'Uso diario'],
+    notes: {
+      salida: ['Orquídea', 'Heliotropo', 'Mandarina'],
+      corazon: ['Frutas tropicales', 'Acorde goloso'],
+      fondo: ['Vainilla', 'Sándalo', 'Almizcle'],
+    },
     versions: [{ key: 'premium', label: 'Premium', price: 155000 }],
     featured: true,
     bestseller: false,
@@ -26,8 +34,16 @@ export const products: Product[] = [
     concentration: 'Eau de Parfum',
     sizeMl: 80,
     image: '/images/image copy 2.png',
-    gallery: ['/images/image copy 2.png'],
-    description: '212 VIP Rosé de Carolina Herrera, presentado con la información disponible del producto.',
+    gallery: ['/images/image copy 2.png', '/images/212-vip-rose-2.webp'],
+    description:
+      'Burbujeante, femenino y listo para la fiesta. 212 VIP Rosé abre con champaña rosada y pimienta rosa, una salida chispeante y alegre. En el corazón florecen la flor de durazno y un bouquet de rosas, y el fondo de maderas y almizcle le da una estela elegante y sensual. Para celebrar, salir con amigas y las noches especiales.',
+    family: 'Floral frutal',
+    occasions: ['Noche', 'Fiestas', 'Celebraciones'],
+    notes: {
+      salida: ['Champaña rosada', 'Pimienta rosa'],
+      corazon: ['Flor de durazno', 'Rosas'],
+      fondo: ['Maderas', 'Almizcle'],
+    },
     versions: [
       { key: 'classic', label: 'Classic', price: 100000 },
       { key: 'premium', label: 'Premium', price: 125000 },
@@ -122,8 +138,16 @@ export const products: Product[] = [
     concentration: 'Eau de Toilette',
     sizeMl: 100,
     image: '/images/image copy 9.png',
-    gallery: ['/images/image copy 9.png', '/images/image copy 10.png'],
-    description: 'Hugo XX, presentado con la información disponible del producto.',
+    gallery: ['/images/image copy 9.png', '/images/hugo-xx-2.webp'],
+    description:
+      'Fresca, frutal y llena de energía. Hugo XX abre con lichi, grosella negra y mandarina, y pasa a un corazón floral de jazmín y rosa con un toque original de arroz basmati. El fondo de sándalo, ámbar y almizcle la vuelve suave y femenina, con una estela limpia y agradable. Ideal para el día, la oficina y el clima cálido.',
+    family: 'Floral frutal',
+    occasions: ['Día', 'Oficina', 'Clima cálido'],
+    notes: {
+      salida: ['Lichi', 'Grosella negra', 'Mandarina'],
+      corazon: ['Jazmín', 'Arroz basmati', 'Rosa'],
+      fondo: ['Sándalo', 'Ámbar', 'Almizcle'],
+    },
     versions: [
       { key: 'classic', label: 'Classic', price: 100000 },
       { key: 'premium', label: 'Premium', price: 125000 },
