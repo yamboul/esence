@@ -14,6 +14,8 @@ export interface ProductVersion {
   key: VersionKey;
   label: string;
   price: number;
+  /** Detalle propio de esta versión en este perfume (p. ej. el tipo de estuche). */
+  detail?: string;
 }
 
 export interface Product {

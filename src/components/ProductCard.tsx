@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import type { Product } from '@/types';
 import { formatCOP, getPremiumPrice, getClassicPrice, hasTwoVersions } from '@/types';
 import { ShoppingBag } from 'lucide-react';
+import { noveltyDistinguishes } from '@/data/products';
 
 interface Props {
   product: Product;
@@ -29,7 +30,7 @@ export default function ProductCard({ product, onAdd }: Props) {
                 Oferta
               </span>
             )}
-            {product.novelty && (
+            {product.novelty && noveltyDistinguishes && (
               <span className="rounded-full bg-gold-400 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-ink-900">
                 Nuevo
               </span>
@@ -82,7 +83,7 @@ export default function ProductCard({ product, onAdd }: Props) {
         <div className="mt-auto flex gap-2 pt-3 sm:pt-4">
           <Link
             to={`/producto/${product.id}`}
-            className="hidden flex-1 rounded-full border border-ink-300 py-2.5 text-center text-xs font-medium uppercase tracking-wider sm:block text-ink-900 transition-all hover:border-ink-900 hover:bg-ink-900 hover:text-ivory-50"
+            className="hidden flex-1 rounded-full border border-ink-300 py-2.5 text-center text-xs font-medium uppercase tracking-wider sm:block text-ink-900 transition-all hover:border-ink-900 hover:bg-ink-900 hover:text-ivory-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900"
           >
             Ver perfume
           </Link>
@@ -91,7 +92,7 @@ export default function ProductCard({ product, onAdd }: Props) {
             disabled={!product.inStock}
             aria-label={product.inStock ? `Agregar ${product.name} al carrito` : `${product.name} agotado`}
             title={product.inStock ? undefined : 'Agotado'}
-            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-ink-900 text-xs font-medium uppercase tracking-wider sm:w-10 sm:flex-none text-ivory-50 transition-all hover:bg-ink-800 active:scale-95 disabled:cursor-not-allowed disabled:bg-ink-300 disabled:active:scale-100"
+            className="flex h-10 flex-1 items-center justify-center gap-2 rounded-full bg-ink-900 text-xs font-medium uppercase tracking-wider sm:w-10 sm:flex-none text-ivory-50 transition-all hover:bg-ink-800 active:scale-95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink-900 disabled:cursor-not-allowed disabled:bg-ink-300 disabled:active:scale-100"
           >
             <ShoppingBag className="h-4 w-4" />
             <span className="sm:hidden">{product.inStock ? 'Agregar' : 'Agotado'}</span>

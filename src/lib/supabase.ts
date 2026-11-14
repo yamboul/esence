@@ -11,6 +11,13 @@ export const supabase: SupabaseClient | null = url && anonKey ? createClient(url
 
 export const supabaseEnabled = supabase !== null;
 
+/**
+ * Pedidos guardados en Supabase y pago en línea con Wompi. Requiere las Edge Functions desplegadas
+ * (create-order, wompi-webhook) y sus secretos. Mientras sea false, el login con Google funciona igual,
+ * pero los pedidos se envían por WhatsApp.
+ */
+export const onlineOrders = supabaseEnabled && import.meta.env.VITE_ORDERS_ONLINE === 'true';
+
 /** Mensaje de error legible de una Edge Function invocada con supabase.functions.invoke. */
 export async function functionErrorMessage(error: unknown): Promise<string> {
   const ctx = (error as { context?: Response })?.context;

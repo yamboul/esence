@@ -21,3 +21,6 @@ dist-ssr
 *.sln
 *.sw?
 .env
+
+# Archivos internos de la CLI de Supabase
+supabase/.temp/

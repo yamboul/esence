@@ -1,6 +1,9 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { supabase } from '@/lib/supabase';
+import type { CheckoutForm } from '@/types';
+
+type PaymentMethod = CheckoutForm['paymentMethod'];
 
 export interface Profile {
   id: string;
@@ -8,6 +11,39 @@ export interface Profile {
   full_name: string | null;
   role: 'cliente' | 'admin';
   marketing_opt_in: boolean;
+  phone: string | null;
+  department: string | null;
+  city: string | null;
+  address: string | null;
+  address_notes: string | null;
+  preferred_payment: PaymentMethod | null;
+  data_consent_at: string | null;
+  data_policy_version: string | null;
+}
+
+/** Campos que el cliente puede editar de su propio perfil. */
+export type ProfilePatch = Partial<
+  Pick<
+    Profile,
+    | 'full_name'
+    | 'phone'
+    | 'department'
+    | 'city'
+    | 'address'
+    | 'address_notes'
+    | 'preferred_payment'
+    | 'data_consent_at'
+    | 'data_policy_version'
+  >
+>;
+
+const PROFILE_COLUMNS =
+  'id, email, full_name, role, marketing_opt_in, phone, department, city, address, address_notes, preferred_payment, data_consent_at, data_policy_version';
+
+/** ¿Tiene todo lo necesario para enviar un pedido sin volver a escribir nada? */
+// eslint-disable-next-line react-refresh/only-export-components
+export function hasShippingData(p: Profile | null): p is Profile {
+  return Boolean(p?.full_name && p.phone && p.department && p.city && p.address);
 }
 
 interface AuthContextValue {
@@ -20,6 +56,8 @@ interface AuthContextValue {
   signInWithPassword: (email: string, password: string) => Promise<string | null>;
   signOut: () => Promise<void>;
   setMarketingOptIn: (value: boolean) => Promise<string | null>;
+  /** Guarda cambios del perfil propio. Devuelve un mensaje de error o null. */
+  updateProfile: (patch: ProfilePatch) => Promise<string | null>;
   refreshProfile: () => Promise<void>;
 }
 
@@ -35,12 +73,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setProfile(null);
       return;
     }
-    const { data } = await supabase
+    const full = await supabase.from('profiles').select(PROFILE_COLUMNS).eq('id', userId).maybeSingle();
+    if (!full.error) {
+      setProfile((full.data as Profile | null) ?? null);
+      return;
+    }
+    // Si aún no se ejecutó la migración de datos de envío, se cargan solo las columnas básicas
+    // para que el login (y el acceso de administradores) siga funcionando.
+    const basic = await supabase
       .from('profiles')
       .select('id, email, full_name, role, marketing_opt_in')
       .eq('id', userId)
       .maybeSingle();
-    setProfile((data as Profile | null) ?? null);
+    setProfile(
+      basic.data
+        ? {
+            ...(basic.data as Pick<Profile, 'id' | 'email' | 'full_name' | 'role' | 'marketing_opt_in'>),
+            phone: null,
+            department: null,
+            city: null,
+            address: null,
+            address_notes: null,
+            preferred_payment: null,
+            data_consent_at: null,
+            data_policy_version: null,
+          }
+        : null
+    );
   }, []);
 
   useEffect(() => {
@@ -97,6 +156,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .eq('id', session.user.id);
         if (error) return 'No pudimos guardar tu preferencia.';
         setProfile((p) => (p ? { ...p, marketing_opt_in: optIn } : p));
+        return null;
+      },
+      updateProfile: async (patch) => {
+        if (!supabase || !session) return 'Inicia sesión primero.';
+        const { error } = await supabase.from('profiles').update(patch).eq('id', session.user.id);
+        if (error) return 'No pudimos guardar tus datos. Intenta de nuevo.';
+        setProfile((p) => (p ? { ...p, ...patch } : p));
         return null;
       },
       refreshProfile: () => loadProfile(session?.user.id),

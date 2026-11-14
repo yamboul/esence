@@ -21,7 +21,20 @@ values
   ('9pm-night-out', '9 PM Night Out', 'Afnan', null, 190000, true),
   ('tommy', 'Tommy', 'Tommy Hilfiger', 100000, 130000, true),
   ('tommy-girl', 'Tommy Girl', 'Tommy Hilfiger', 100000, 125000, true),
-  ('cloud-ariana-grande', 'Cloud', 'Ariana Grande', null, 155000, true)
+  ('cloud-ariana-grande', 'Cloud', 'Ariana Grande', null, 155000, true),
+  ('invictus', 'Invictus', 'Paco Rabanne', 100000, 125000, true),
+  ('invictus-legend', 'Invictus Legend', 'Paco Rabanne', null, 125000, true),
+  ('212-men', '212 Men', 'Carolina Herrera', 100000, 125000, true),
+  ('le-beau', 'Le Beau', 'Jean Paul Gaultier', null, 125000, true),
+  ('acqua-di-gio', 'Acqua di Giò', 'Giorgio Armani', null, 125000, true),
+  ('lacoste-red', 'Lacoste Red', 'Lacoste', 100000, 125000, true),
+  ('lacoste-blanc', 'L.12.12 Blanc', 'Lacoste', 100000, 125000, true),
+  ('polo-blue', 'Polo Blue', 'Ralph Lauren', null, 125000, true),
+  ('ck-one', 'CK One', 'Calvin Klein', null, 125000, true),
+  ('khamrah-lattafa', 'Khamrah', 'Lattafa', null, 125000, true),
+  ('asad-lattafa', 'Asad', 'Lattafa', null, 125000, true),
+  ('arsenal-black', 'Arsenal Black', 'Gilles Cantuel', 100000, 140000, true),
+  ('versace-eros', 'Versace Eros', 'Versace', null, 125000, true)
 on conflict (id) do update set
   name = excluded.name,
   brand = excluded.brand,
@@ -32,4 +45,4 @@ on conflict (id) do update set
 
 -- Productos que ya no están en el catálogo quedan agotados (no se borran: pedidos antiguos los referencian).
 update public.products set in_stock = false, updated_at = now()
-where id not in ('yara-lattafa', '212-vip-rose-carolina-herrera', 'sauvage-dior', 'asad-bourbon-lattafa', 'born-in-roma-intense', 'hugo-xx', 'tyrant-odyssey', 'versace-eros-energy', '212-men-sexy', '212-vip', '212-vip-black', 'versace-eros-flame', 'one-million', 'one-million-lucky', 'one-million-royal', 'ultra-male', 'le-male-elixir', '9pm-night-out', 'tommy', 'tommy-girl', 'cloud-ariana-grande');
+where id not in ('yara-lattafa', '212-vip-rose-carolina-herrera', 'sauvage-dior', 'asad-bourbon-lattafa', 'born-in-roma-intense', 'hugo-xx', 'tyrant-odyssey', 'versace-eros-energy', '212-men-sexy', '212-vip', '212-vip-black', 'versace-eros-flame', 'one-million', 'one-million-lucky', 'one-million-royal', 'ultra-male', 'le-male-elixir', '9pm-night-out', 'tommy', 'tommy-girl', 'cloud-ariana-grande', 'invictus', 'invictus-legend', '212-men', 'le-beau', 'acqua-di-gio', 'lacoste-red', 'lacoste-blanc', 'polo-blue', 'ck-one', 'khamrah-lattafa', 'asad-lattafa', 'arsenal-black', 'versace-eros');

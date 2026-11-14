@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
-import { products, brands, hasCategory, hasNovelties, hasOffers } from '@/data/products';
+import { ChevronDown, Search, SlidersHorizontal, X } from 'lucide-react';
+import { products, brands, hasCategory, noveltyDistinguishes, hasOffers } from '@/data/products';
 import { useCart } from '@/context/CartContext';
 import ProductCard from '@/components/ProductCard';
 import type { Category, Product } from '@/types';
@@ -107,6 +107,15 @@ export default function CatalogPage() {
     return list;
   }, [search, category, onlyOffers, onlyNovelties, selectedBrands, priceRange, sort]);
 
+  // Filtros del panel lateral activos (la búsqueda y el orden van aparte).
+  const activeFilters =
+    (category !== 'all' ? 1 : 0) +
+    selectedBrands.length +
+    (priceRange !== null ? 1 : 0) +
+    (onlyOffers ? 1 : 0) +
+    (onlyNovelties ? 1 : 0);
+  const hasActiveFilters = activeFilters > 0 || search.trim() !== '';
+
   const title = onlyOffers
     ? 'Ofertas'
     : onlyNovelties
@@ -125,7 +134,7 @@ export default function CatalogPage() {
         <p className="section-eyebrow">Catálogo ESSENCE</p>
         <h1 className="font-serif text-3xl font-medium text-ink-900 sm:text-4xl">{title}</h1>
         <p className="mt-2 text-sm text-ink-500">
-          {filtered.length} {filtered.length === 1 ? 'fragancia' : 'fragancias'} encontradas
+          {filtered.length} {filtered.length === 1 ? 'fragancia encontrada' : 'fragancias encontradas'}
         </p>
       </div>
 
@@ -143,35 +152,54 @@ export default function CatalogPage() {
         <div className="flex gap-3">
           <button
             onClick={() => setShowFilters((v) => !v)}
-            className="inline-flex items-center gap-2 rounded-full border border-ink-200 px-5 py-3 text-sm font-medium text-ink-700 lg:hidden"
+            aria-expanded={showFilters}
+            aria-controls="catalog-filters"
+            className={`inline-flex items-center gap-2 rounded-full border px-5 py-3 text-sm font-medium transition-colors lg:hidden ${
+              showFilters ? 'border-ink-900 bg-ink-900 text-ivory-50' : 'border-ink-200 text-ink-700'
+            }`}
           >
             <SlidersHorizontal className="h-4 w-4" /> Filtros
+            {activeFilters > 0 && (
+              <span
+                className={`grid h-5 min-w-5 place-items-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums ${
+                  showFilters ? 'bg-ivory-50 text-ink-900' : 'bg-ink-900 text-ivory-50'
+                }`}
+              >
+                {activeFilters}
+              </span>
+            )}
           </button>
-          <select
-            value={sort}
-            onChange={(e) => setSort(e.target.value as SortKey)}
-            className="rounded-full border border-ink-200 bg-white px-5 py-3 text-sm font-medium text-ink-700 focus:border-ink-900 focus:outline-none"
-          >
-            <option value="relevance">Relevancia</option>
-            <option value="price-asc">Precio: menor a mayor</option>
-            <option value="price-desc">Precio: mayor a menor</option>
-            <option value="name">Nombre A–Z</option>
-          </select>
+          <div className="relative flex-1 sm:flex-none">
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as SortKey)}
+              aria-label="Ordenar por"
+              className="w-full appearance-none rounded-full border border-ink-200 bg-white py-3 pl-5 pr-11 text-sm font-medium text-ink-700 focus:border-ink-900 focus:outline-none"
+            >
+              <option value="relevance">Relevancia</option>
+              <option value="price-asc">Precio: menor a mayor</option>
+              <option value="price-desc">Precio: mayor a menor</option>
+              <option value="name">Nombre A–Z</option>
+            </select>
+            <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-500" />
+          </div>
         </div>
       </div>
 
       <div className="grid gap-10 lg:grid-cols-[260px_1fr]">
         {/* Sidebar */}
-        <aside className={`${showFilters ? 'block' : 'hidden'} lg:block`}>
+        <aside id="catalog-filters" className={`${showFilters ? 'block' : 'hidden'} lg:block`}>
           <div className="sticky top-24 space-y-8">
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Categoría</h3>
-              <div className="flex flex-col gap-1">
+              {/* -mx-3: el texto queda alineado con las marcas y precios; el fondo activo sobresale. */}
+              <div className="-mx-3 flex flex-col gap-1">
                 {categories.map((c) => (
                   <button
                     key={c.value}
                     onClick={() => setCategory(c.value)}
-                    className={`rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                    aria-pressed={category === c.value}
+                    className={`rounded-lg px-3 py-2 text-left text-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-ink-900 ${
                       category === c.value
                         ? 'bg-ink-900 text-ivory-50'
                         : 'text-ink-700 hover:bg-ink-100'
@@ -216,16 +244,18 @@ export default function CatalogPage() {
                     <span className="text-xs text-ink-500">({rangeCounts[i]})</span>
                   </label>
                 ))}
-                <button
-                  onClick={() => setPriceRange(null)}
-                  className="mt-1 px-3 text-left text-xs text-ink-500 hover:text-ink-900"
-                >
-                  Sin filtro de precio
-                </button>
+                {priceRange !== null && (
+                  <button
+                    onClick={() => setPriceRange(null)}
+                    className="mt-1 self-start text-xs text-ink-500 underline-offset-4 hover:text-ink-900 hover:underline"
+                  >
+                    Quitar filtro de precio
+                  </button>
+                )}
               </div>
             </div>
 
-            {(hasOffers || hasNovelties) && (
+            {(hasOffers || noveltyDistinguishes) && (
             <div>
               <h3 className="mb-3 text-xs font-semibold uppercase tracking-widest text-ink-500">Destacados</h3>
               <div className="flex flex-col gap-1.5 text-sm text-ink-700">
@@ -240,7 +270,7 @@ export default function CatalogPage() {
                   Solo ofertas
                 </label>
                 )}
-                {hasNovelties && (
+                {noveltyDistinguishes && (
                 <label className="flex items-center gap-2.5">
                   <input
                     type="checkbox"
@@ -255,12 +285,14 @@ export default function CatalogPage() {
             </div>
             )}
 
-            <button
-              onClick={resetFilters}
-              className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900"
-            >
-              <X className="h-4 w-4" /> Limpiar filtros
-            </button>
+            {hasActiveFilters && (
+              <button
+                onClick={resetFilters}
+                className="inline-flex items-center gap-1.5 text-sm text-ink-500 hover:text-ink-900"
+              >
+                <X className="h-4 w-4" /> Limpiar filtros
+              </button>
+            )}
           </div>
         </aside>
 
